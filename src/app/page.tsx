@@ -2,7 +2,7 @@
 
 import { useState, useMemo, createContext, useContext } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Copy, Trash2, Pencil, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut } from "lucide-react";
+import { Plus, Search, Copy, Trash2, Pencil, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,8 @@ import {
 import { useSnippets } from "@/hooks/useSnippets";
 import { Snippet } from "@/types";
 import { SmartEditor } from "@/components/SmartEditor";
+import { QuickClipboardEditor } from "@/components/QuickClipboardEditor";
+import { LinkShareEditor } from "@/components/LinkShareEditor";
 
 // Privacy Context
 const PrivacyContext = createContext<{
@@ -48,21 +50,46 @@ interface TagSidebarProps {
   uniqueTags: string[];
   selectedTag: string | null;
   showHidden: boolean;
+  currentView: 'snippets' | 'quick-clip' | 'link-share';
   onSelectTag: (tag: string | null) => void;
   onToggleHidden: (show: boolean) => void;
+  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share') => void;
 }
 
-const TagSidebar = ({ uniqueTags, selectedTag, showHidden, onSelectTag, onToggleHidden }: TagSidebarProps) => (
+const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
   <div className="space-y-4">
     <div className="px-3 py-2">
       <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
+        Menu
+      </h2>
+      <div className="space-y-1">
+        <Button
+            variant={currentView === 'quick-clip' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('quick-clip')}
+        >
+            <Clipboard className="mr-2 h-4 w-4" />
+            Quick Clipboard
+        </Button>
+        <Button
+            variant={currentView === 'link-share' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('link-share')}
+        >
+            <Link2 className="mr-2 h-4 w-4" />
+            Link Share
+        </Button>
+      </div>
+
+      <h2 className="mt-6 mb-2 px-4 text-lg font-semibold tracking-tight">
         Filters
       </h2>
       <div className="space-y-1">
         <Button
-          variant={selectedTag === null && !showHidden ? "secondary" : "ghost"}
+          variant={currentView === 'snippets' && selectedTag === null && !showHidden ? "secondary" : "ghost"}
           className="w-full justify-start"
           onClick={() => {
+              onViewChange('snippets');
               onSelectTag(null);
               onToggleHidden(false);
           }}
@@ -71,9 +98,12 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, onSelectTag, onToggle
           All Snippets
         </Button>
         <Button
-            variant={showHidden ? "secondary" : "ghost"}
+            variant={currentView === 'snippets' && showHidden ? "secondary" : "ghost"}
             className="w-full justify-start text-muted-foreground hover:text-foreground"
-            onClick={() => onToggleHidden(true)}
+            onClick={() => {
+                onViewChange('snippets');
+                onToggleHidden(true);
+            }}
         >
             <EyeOff className="mr-2 h-4 w-4" />
             Hidden Snippets
@@ -87,9 +117,10 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, onSelectTag, onToggle
         {uniqueTags.map((tag) => (
           <Button
             key={tag}
-            variant={selectedTag === tag ? "secondary" : "ghost"}
+            variant={currentView === 'snippets' && selectedTag === tag ? "secondary" : "ghost"}
             className="w-full justify-start"
             onClick={() => {
+                onViewChange('snippets');
                 onSelectTag(tag);
                 onToggleHidden(false);
             }}
@@ -113,6 +144,7 @@ export default function Home() {
     updateSnippet,
     deleteSnippet,
   } = useSnippets();
+  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share'>('snippets');
   const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -232,6 +264,11 @@ export default function Home() {
     }
   };
 
+  // Helper to switch views
+  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share') => {
+      setCurrentView(view);
+  };
+
   return (
     <PrivacyContext.Provider value={{ isPrivacyMode, togglePrivacyMode }}>
     <div className="min-h-screen bg-background flex">
@@ -243,15 +280,17 @@ export default function Home() {
             uniqueTags={uniqueTags} 
             selectedTag={selectedTag} 
             showHidden={showHidden}
+            currentView={currentView}
             onSelectTag={setSelectedTag} 
             onToggleHidden={setShowHidden}
+            onViewChange={handleViewChange}
         />
       </aside>
 
       {/* Main Content Area - Using Flex to adjust width when editor is open */}
       <div className="flex flex-1 min-w-0">
-        <main className="flex-1 p-4 md:p-8 min-w-0 max-w-5xl mx-auto w-full">
-          <header className="flex flex-col gap-4 mb-6">
+        <main className="flex-1 p-4 md:p-8 min-w-0 max-w-5xl mx-auto w-full flex flex-col">
+          <header className="flex flex-col gap-4 mb-6 shrink-0">
             <div className="flex items-center justify-between md:hidden">
               <h1 className="text-xl font-bold tracking-tight">Personal Store</h1>
               <Sheet>
@@ -268,7 +307,8 @@ export default function Home() {
                     <TagSidebar 
                       uniqueTags={uniqueTags} 
                       selectedTag={selectedTag}
-                      showHidden={showHidden} 
+                      showHidden={showHidden}
+                      currentView={currentView}
                       onSelectTag={(tag) => {
                           setSelectedTag(tag);
                           setShowHidden(false);
@@ -276,7 +316,8 @@ export default function Home() {
                       onToggleHidden={(hidden) => {
                           setShowHidden(hidden);
                           setSelectedTag(null);
-                      }} 
+                      }}
+                      onViewChange={handleViewChange}
                     />
                   </div>
                 </SheetContent>
@@ -350,7 +391,16 @@ export default function Home() {
             )}
           </header>
 
-          <div className="grid grid-cols-1 gap-3">
+          {currentView === 'quick-clip' ? (
+            <div className="flex-1 h-full min-h-[500px]">
+                <QuickClipboardEditor />
+            </div>
+          ) : currentView === 'link-share' ? (
+             <div className="flex-1 h-full min-h-[500px]">
+                <LinkShareEditor />
+             </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3">
             {displayedSnippets.map((snippet) => (
               <Card
                 key={snippet.id}
@@ -418,6 +468,7 @@ export default function Home() {
               </div>
             )}
           </div>
+          )}
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col">
