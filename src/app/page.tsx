@@ -43,8 +43,6 @@ const PrivacyContext = createContext<{
   togglePrivacyMode: () => {},
 });
 
-const usePrivacy = () => useContext(PrivacyContext);
-
 interface TagSidebarProps {
   uniqueTags: string[];
   selectedTag: string | null;
