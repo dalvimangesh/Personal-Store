@@ -283,47 +283,51 @@ export default function Home() {
               </Sheet>
             </div>
 
-            <div className="flex items-center gap-2 w-full">
-              <div className="relative flex-1">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4 w-full">
+              <div className="relative flex-1 w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Search snippets..."
-                  className="pl-9 h-9"
+                  className="pl-9 h-9 w-full"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button 
-                  variant={isPrivacyMode ? "destructive" : "outline"}
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  onClick={togglePrivacyMode}
-                  title={isPrivacyMode ? "Disable Privacy Mode" : "Enable Privacy Mode"}
-              >
-                  {isPrivacyMode ? <Shield className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-              <Button 
-                  variant={isSmartEditorOpen ? "secondary" : "outline"}
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  onClick={() => setIsSmartEditorOpen(!isSmartEditorOpen)}
-                  title="Toggle Smart Editor"
-              >
-                  <Sparkles className={`h-4 w-4 ${isSmartEditorOpen ? "text-yellow-600" : "text-yellow-500"}`} />
-              </Button>
-              <Button 
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 shrink-0 hover:text-destructive hover:border-destructive/50"
-                  onClick={handleLogout}
-                  title="Logout"
-              >
-                  <LogOut className="h-4 w-4" />
-              </Button>
-              <Button onClick={openAddDialog} size="sm" className="h-9">
-                <Plus className="h-4 w-4 mr-1" /> Add Snippet
-              </Button>
+              <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-start">
+                <div className="flex items-center gap-2">
+                  <Button 
+                      variant={isPrivacyMode ? "destructive" : "outline"}
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={togglePrivacyMode}
+                      title={isPrivacyMode ? "Disable Privacy Mode" : "Enable Privacy Mode"}
+                  >
+                      {isPrivacyMode ? <Shield className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                  <Button 
+                      variant={isSmartEditorOpen ? "secondary" : "outline"}
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => setIsSmartEditorOpen(!isSmartEditorOpen)}
+                      title="Toggle Smart Editor"
+                  >
+                      <Sparkles className={`h-4 w-4 ${isSmartEditorOpen ? "text-yellow-600" : "text-yellow-500"}`} />
+                  </Button>
+                  <Button 
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 shrink-0 hover:text-destructive hover:border-destructive/50"
+                      onClick={handleLogout}
+                      title="Logout"
+                  >
+                      <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button onClick={openAddDialog} size="sm" className="h-9 ml-auto md:ml-0">
+                  <Plus className="h-4 w-4 mr-1" /> Add Snippet
+                </Button>
+              </div>
             </div>
             {(selectedTag || showHidden) && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
