@@ -29,6 +29,7 @@ export async function PUT(
         title: s.title,
         content: s.content,
         tags: s.tags,
+        isHidden: s.isHidden,
         createdAt: s.createdAt
       } 
     });
@@ -56,4 +57,3 @@ export async function DELETE(
     return NextResponse.json({ success: false }, { status: 400 });
   }
 }
-

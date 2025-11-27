@@ -3,6 +3,6 @@ export interface Snippet {
   title: string;
   content: string;
   tags: string[];
+  isHidden?: boolean;
   createdAt: Date;
 }
-

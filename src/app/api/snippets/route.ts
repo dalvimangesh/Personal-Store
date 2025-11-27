@@ -12,6 +12,7 @@ export async function GET() {
       title: doc.title,
       content: doc.content,
       tags: doc.tags,
+      isHidden: doc.isHidden || false,
       createdAt: doc.createdAt,
     }));
     return NextResponse.json({ success: true, data: formattedSnippets });
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
         title: snippet.title,
         content: snippet.content,
         tags: snippet.tags,
+        isHidden: snippet.isHidden,
         createdAt: snippet.createdAt
       } 
     }, { status: 201 });
@@ -40,4 +42,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: error }, { status: 400 });
   }
 }
-
