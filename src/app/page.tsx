@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo, createContext, useContext } from "react";
-import { Plus, Search, Copy, Trash2, Pencil, Menu, Tag, EyeOff, Eye, Shield, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Plus, Search, Copy, Trash2, Pencil, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -103,6 +104,7 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, onSelectTag, onToggle
 );
 
 export default function Home() {
+  const router = useRouter();
   const {
     snippets,
     searchQuery,
@@ -219,6 +221,17 @@ export default function Home() {
     setIsDialogOpen(false);
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to logout");
+    }
+  };
+
   return (
     <PrivacyContext.Provider value={{ isPrivacyMode, togglePrivacyMode }}>
     <div className="min-h-screen bg-background flex">
@@ -298,6 +311,15 @@ export default function Home() {
                   title="Toggle Smart Editor"
               >
                   <Sparkles className={`h-4 w-4 ${isSmartEditorOpen ? "text-yellow-600" : "text-yellow-500"}`} />
+              </Button>
+              <Button 
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 hover:text-destructive hover:border-destructive/50"
+                  onClick={handleLogout}
+                  title="Logout"
+              >
+                  <LogOut className="h-4 w-4" />
               </Button>
               <Button onClick={openAddDialog} size="sm" className="h-9">
                 <Plus className="h-4 w-4 mr-1" /> Add Snippet

@@ -5,6 +5,7 @@ export interface ISnippet extends Document {
   content: string;
   tags: string[];
   isHidden: boolean;
+  userId: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -15,6 +16,7 @@ const SnippetSchema: Schema = new Schema(
     content: { type: String, required: true },
     tags: { type: [String], default: [] },
     isHidden: { type: Boolean, default: false },
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   {
     timestamps: true,

@@ -1,6 +1,8 @@
 import dbConnect from '@/lib/db';
 import Snippet from '@/models/Snippet';
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { verifySession } from '@/lib/auth';
 
 export async function PUT(
   request: Request,
@@ -10,14 +12,25 @@ export async function PUT(
   const { id } = await params;
   
   try {
+    const cookieStore = await cookies();
+    const session = await verifySession(cookieStore.get('session')?.value);
+    
+    if (!session?.userId || typeof session.userId !== 'string') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
-    const snippet = await Snippet.findByIdAndUpdate(id, body, {
-      new: true,
-      runValidators: true,
-    });
+    const snippet = await Snippet.findOneAndUpdate(
+      { _id: id, userId: session.userId },
+      body,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
     
     if (!snippet) {
-      return NextResponse.json({ success: false }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Snippet not found or unauthorized' }, { status: 404 });
     }
 
     const s = snippet as any;
@@ -46,10 +59,17 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const deletedSnippet = await Snippet.deleteOne({ _id: id });
+    const cookieStore = await cookies();
+    const session = await verifySession(cookieStore.get('session')?.value);
     
-    if (!deletedSnippet) {
-      return NextResponse.json({ success: false }, { status: 404 });
+    if (!session?.userId || typeof session.userId !== 'string') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const result = await Snippet.deleteOne({ _id: id, userId: session.userId });
+    
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ success: false, error: 'Snippet not found or unauthorized' }, { status: 404 });
     }
     
     return NextResponse.json({ success: true, data: {} });
