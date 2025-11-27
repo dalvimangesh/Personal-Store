@@ -240,31 +240,27 @@ export default function Home() {
           )}
         </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3">
           {displayedSnippets.map((snippet) => (
             <Card
               key={snippet.id}
-              className="group relative flex flex-col hover:border-primary/50 transition-colors cursor-pointer"
+              className="group relative flex flex-row items-center hover:border-primary/50 transition-colors cursor-pointer p-3"
               onClick={() => openViewDialog(snippet)}
             >
-              <CardHeader className="p-3 pb-1 space-y-0">
-                <div className="flex justify-between items-start gap-2">
-                  <CardTitle className="text-sm font-medium leading-tight line-clamp-1">
+              <div className="flex-1 min-w-0 mr-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-sm font-medium leading-none truncate">
                     {snippet.title}
-                  </CardTitle>
+                  </h3>
                 </div>
-              </CardHeader>
-              <CardContent className="p-3 pt-1 flex-1">
-                <p className="text-sm text-muted-foreground line-clamp-3 whitespace-pre-wrap">
+                <p className="text-xs text-muted-foreground line-clamp-1 mb-2">
                   {snippet.content}
                 </p>
-              </CardContent>
-              <CardFooter className="p-3 pt-0 flex justify-between items-center mt-auto">
-                <div className="flex gap-1 overflow-hidden">
-                  {snippet.tags.slice(0, 2).map((tag) => (
+                <div className="flex gap-1">
+                  {snippet.tags.slice(0, 3).map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center rounded-sm border px-1 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground cursor-pointer hover:bg-secondary/80"
+                      className="inline-flex items-center rounded-sm border px-1.5 py-0.5 text-[10px] font-medium bg-secondary text-secondary-foreground cursor-pointer hover:bg-secondary/80"
                       onClick={(e) => {
                           e.stopPropagation();
                           setSelectedTag(tag);
@@ -273,31 +269,32 @@ export default function Home() {
                       {tag}
                     </span>
                   ))}
-                  {snippet.tags.length > 2 && (
-                    <span className="text-xs text-muted-foreground">
-                      +{snippet.tags.length - 2}
+                  {snippet.tags.length > 3 && (
+                    <span className="text-[10px] text-muted-foreground self-center">
+                      +{snippet.tags.length - 3}
                     </span>
                   )}
                 </div>
-                <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={(e) => handleCopy(snippet.content, e)}
-                  >
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 hover:text-destructive"
-                    onClick={(e) => handleDelete(snippet.id, e)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </CardFooter>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => handleCopy(snippet.content, e)}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => handleDelete(snippet.id, e)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </Card>
           ))}
 
