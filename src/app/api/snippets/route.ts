@@ -7,7 +7,7 @@ export async function GET() {
     await dbConnect();
     const snippets = await Snippet.find({}).sort({ createdAt: -1 });
     // Transform _id to id for frontend consistency
-    const formattedSnippets = snippets.map(doc => ({
+    const formattedSnippets = snippets.map((doc: any) => ({
       id: doc._id.toString(),
       title: doc.title,
       content: doc.content,
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   await dbConnect();
   try {
     const body = await request.json();
-    const snippet = await Snippet.create(body);
+    const snippet = await Snippet.create(body) as any;
     return NextResponse.json({ 
       success: true, 
       data: {

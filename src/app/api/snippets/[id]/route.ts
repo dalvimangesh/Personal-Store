@@ -19,15 +19,17 @@ export async function PUT(
     if (!snippet) {
       return NextResponse.json({ success: false }, { status: 404 });
     }
+
+    const s = snippet as any;
     
     return NextResponse.json({ 
       success: true, 
       data: {
-        id: snippet._id.toString(),
-        title: snippet.title,
-        content: snippet.content,
-        tags: snippet.tags,
-        createdAt: snippet.createdAt
+        id: s._id.toString(),
+        title: s.title,
+        content: s.content,
+        tags: s.tags,
+        createdAt: s.createdAt
       } 
     });
   } catch (error) {
