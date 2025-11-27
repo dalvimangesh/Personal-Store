@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, createContext, useContext } from "react";
+import { useState, useMemo, createContext } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Search, Copy, Trash2, Pencil, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2 } from "lucide-react";
 import { toast } from "sonner";
@@ -12,10 +12,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -324,7 +320,7 @@ export default function Home() {
               </Sheet>
             </div>
 
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4 w-full">
+            <div className="flex flex-col md:flex-row items-center gap-3 md:gap-4 w-full">
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -366,7 +362,7 @@ export default function Home() {
                   </Button>
                 </div>
                 <Button onClick={openAddDialog} size="sm" className="h-9 ml-auto md:ml-0">
-                  <Plus className="h-4 w-4 mr-1" /> Add Snippet
+                  <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Snippet</span><span className="sm:hidden">Add</span>
                 </Button>
               </div>
             </div>
@@ -441,11 +437,11 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 ml-2">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                    className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                     onClick={(e) => handleCopy(snippet.content, e)}
                   >
                     <Copy className="h-4 w-4" />
@@ -453,7 +449,7 @@ export default function Home() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                    className="h-8 w-8 hover:text-destructive opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                     onClick={(e) => handleDelete(snippet.id, e)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -611,7 +607,7 @@ export default function Home() {
 
         {/* Embedded Smart Editor */}
         {isSmartEditorOpen && (
-          <div className="h-[calc(100vh)] sticky top-0 right-0 shrink-0 z-20 shadow-xl">
+          <div className="lg:h-[calc(100vh)] lg:sticky lg:top-0 lg:right-0 lg:shrink-0 lg:z-20 lg:shadow-xl">
             <SmartEditor 
                 isOpen={true}
                 onClose={() => setIsSmartEditorOpen(false)} 

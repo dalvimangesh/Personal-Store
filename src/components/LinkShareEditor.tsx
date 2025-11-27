@@ -119,7 +119,7 @@ export function LinkShareEditor() {
 
         <div className="flex flex-col gap-2">
             {items.map((item, index) => (
-                <div key={index} className="flex gap-2 items-center group">
+                <div key={index} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center group p-3 sm:p-0 border sm:border-0 rounded-lg bg-muted/10 sm:bg-transparent">
                     {/* Optional drag handle placeholder or just visual */}
                     <GripVertical className="h-4 w-4 text-muted-foreground/20 cursor-grab active:cursor-grabbing hidden sm:block" />
                     
@@ -127,20 +127,24 @@ export function LinkShareEditor() {
                         placeholder="Label (Optional)"
                         value={item.label}
                         onChange={(e) => handleItemChange(index, 'label', e.target.value)}
-                        className="w-1/4 min-w-[100px]"
+                        className="w-full sm:w-1/4 sm:min-w-[100px]"
                     />
-                    <Input
-                        placeholder="Paste link or text here..."
-                        value={item.value}
-                        onChange={(e) => handleItemChange(index, 'value', e.target.value)}
-                        className="flex-1 font-mono text-sm"
-                    />
-                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground" onClick={() => handleCopy(item.value)} title="Copy Value">
-                        <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteItem(index)} title="Delete Row">
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-2 w-full sm:flex-1">
+                        <Input
+                            placeholder="Paste link or text here..."
+                            value={item.value}
+                            onChange={(e) => handleItemChange(index, 'value', e.target.value)}
+                            className="flex-1 font-mono text-sm"
+                        />
+                        <div className="flex gap-1 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground" onClick={() => handleCopy(item.value)} title="Copy Value">
+                                <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteItem(index)} title="Delete Row">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             ))}
         </div>
