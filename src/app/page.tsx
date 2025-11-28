@@ -2,24 +2,14 @@
 
 import { useState, useMemo, createContext } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Copy, Trash2, Pencil, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2 } from "lucide-react";
+import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import {
   Card,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
@@ -32,6 +22,7 @@ import { Snippet } from "@/types";
 import { SmartEditor } from "@/components/SmartEditor";
 import { QuickClipboardEditor } from "@/components/QuickClipboardEditor";
 import { LinkShareEditor } from "@/components/LinkShareEditor";
+import { SnippetEditor } from "@/components/SnippetEditor";
 
 // Privacy Context
 const PrivacyContext = createContext<{
@@ -142,15 +133,9 @@ export default function Home() {
   } = useSnippets();
   const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share'>('snippets');
   const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSmartEditorOpen, setIsSmartEditorOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    title: "",
-    content: "",
-    tags: "",
-    isHidden: false,
-  });
+  
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   
@@ -191,62 +176,41 @@ export default function Home() {
     }
   };
 
-  const openAddDialog = () => {
-    setSelectedSnippet(null);
-    setFormData({ title: "", content: "", tags: "", isHidden: false });
-    setIsEditing(true);
-    setIsDialogOpen(true);
-  };
-
-  const openViewDialog = (snippet: Snippet) => {
+  const openEditor = (snippet: Snippet | null = null) => {
     setSelectedSnippet(snippet);
-    setFormData({
-      title: snippet.title,
-      content: snippet.content,
-      tags: snippet.tags.join(", "),
-      isHidden: snippet.isHidden || false,
-    });
-    setIsEditing(false);
-    setIsDialogOpen(true);
+    setIsEditorOpen(true);
+    setIsSmartEditorOpen(false);
+    if (currentView !== 'snippets') {
+        setCurrentView('snippets');
+    }
   };
 
-  const handleSave = () => {
-    if (!formData.title || !formData.content) {
-      toast.error("Title and Content are required");
-      return;
-    }
-
-    const tagsArray = formData.tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-
+  const handleSaveSnippet = (data: { title: string; content: string; tags: string[]; isHidden: boolean }) => {
     if (selectedSnippet) {
       updateSnippet(selectedSnippet.id, {
-        title: formData.title,
-        content: formData.content,
-        tags: tagsArray,
-        isHidden: formData.isHidden,
+        title: data.title,
+        content: data.content,
+        tags: data.tags,
+        isHidden: data.isHidden,
       });
       toast.success("Snippet updated!");
     } else {
       addSnippet({
-        title: formData.title,
-        content: formData.content,
-        tags: tagsArray,
-        isHidden: formData.isHidden,
+        title: data.title,
+        content: data.content,
+        tags: data.tags,
+        isHidden: data.isHidden,
       });
       toast.success("Snippet added!");
     }
-
-    setIsDialogOpen(false);
+    setIsEditorOpen(false);
   };
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDelete = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     deleteSnippet(id);
     toast.success("Snippet deleted");
-    setIsDialogOpen(false);
+    if (isEditorOpen) setIsEditorOpen(false);
   };
 
   const handleLogout = async () => {
@@ -263,6 +227,9 @@ export default function Home() {
   // Helper to switch views
   const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share') => {
       setCurrentView(view);
+      if (view !== 'snippets') {
+          setIsEditorOpen(false);
+      }
   };
 
   return (
@@ -284,8 +251,8 @@ export default function Home() {
       </aside>
 
       {/* Main Content Area - Using Flex to adjust width when editor is open */}
-      <div className="flex flex-1 min-w-0">
-        <main className="flex-1 p-4 md:p-8 min-w-0 max-w-5xl mx-auto w-full flex flex-col">
+      <div className="flex flex-1 min-w-0 overflow-hidden">
+        <main className="flex-1 p-4 md:p-8 min-w-0 w-full flex flex-col overflow-y-auto h-screen">
           <header className="flex flex-col gap-4 mb-6 shrink-0">
             <div className="flex items-center justify-between md:hidden">
               <h1 className="text-xl font-bold tracking-tight">Personal Store</h1>
@@ -346,7 +313,10 @@ export default function Home() {
                       variant={isSmartEditorOpen ? "secondary" : "outline"}
                       size="icon"
                       className="h-9 w-9 shrink-0"
-                      onClick={() => setIsSmartEditorOpen(!isSmartEditorOpen)}
+                      onClick={() => {
+                        setIsSmartEditorOpen(!isSmartEditorOpen);
+                        if (!isSmartEditorOpen) setIsEditorOpen(false);
+                      }}
                       title="Toggle Smart Editor"
                   >
                       <Sparkles className={`h-4 w-4 ${isSmartEditorOpen ? "text-yellow-600" : "text-yellow-500"}`} />
@@ -361,7 +331,7 @@ export default function Home() {
                       <LogOut className="h-4 w-4" />
                   </Button>
                 </div>
-                <Button onClick={openAddDialog} size="sm" className="h-9 ml-auto md:ml-0">
+                <Button onClick={() => openEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
                   <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Snippet</span><span className="sm:hidden">Add</span>
                 </Button>
               </div>
@@ -396,12 +366,12 @@ export default function Home() {
                 <LinkShareEditor />
              </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-3 pb-20">
             {displayedSnippets.map((snippet) => (
               <Card
                 key={snippet.id}
-                className="group relative flex flex-row items-center hover:border-primary/50 transition-colors cursor-pointer p-3"
-                onClick={() => openViewDialog(snippet)}
+                className={`group relative flex flex-row items-center hover:border-primary/50 transition-colors cursor-pointer p-3 ${selectedSnippet?.id === snippet.id && isEditorOpen ? 'border-primary bg-secondary/20' : ''}`}
+                onClick={() => openEditor(snippet)}
               >
                 <div className="flex-1 min-w-0 mr-4">
                   <div className="flex items-center gap-2 mb-1">
@@ -465,149 +435,23 @@ export default function Home() {
             )}
           </div>
           )}
-
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col">
-              <DialogHeader>
-                <DialogTitle>
-                  {selectedSnippet
-                    ? isEditing
-                      ? "Edit Snippet"
-                      : selectedSnippet.title
-                    : "New Snippet"}
-                </DialogTitle>
-              </DialogHeader>
-
-              <div className="flex-1 overflow-y-auto py-2 -mr-2 pr-2">
-                {isEditing ? (
-                  <div className="grid gap-4">
-                    <div className="grid gap-1.5">
-                      <label htmlFor="title" className="text-xs font-medium text-muted-foreground">
-                        Title
-                      </label>
-                      <Input
-                        id="title"
-                        placeholder="Snippet Title"
-                        value={formData.title}
-                        onChange={(e) =>
-                          setFormData({ ...formData, title: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="grid gap-1.5">
-                      <label htmlFor="tags" className="text-xs font-medium text-muted-foreground">
-                        Tags (comma separated)
-                      </label>
-                      <Input
-                        id="tags"
-                        placeholder="tag1, tag2"
-                        value={formData.tags}
-                        onChange={(e) =>
-                          setFormData({ ...formData, tags: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2 py-1">
-                      <Checkbox 
-                          id="hidden" 
-                          checked={formData.isHidden}
-                          onCheckedChange={(checked) => 
-                              setFormData({ ...formData, isHidden: checked as boolean })
-                          }
-                      />
-                      <Label htmlFor="hidden" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                          Hide from main list
-                      </Label>
-                    </div>
-                    <div className="grid gap-1.5">
-                      <label htmlFor="content" className="text-xs font-medium text-muted-foreground">
-                        Content
-                      </label>
-                      <Textarea
-                        id="content"
-                        placeholder="Content goes here..."
-                        className="min-h-[200px] font-mono text-sm"
-                        value={formData.content}
-                        onChange={(e) =>
-                          setFormData({ ...formData, content: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                      {selectedSnippet?.isHidden && (
-                          <div className="bg-secondary/50 text-xs px-2 py-1 rounded inline-flex items-center gap-1 text-muted-foreground">
-                              <EyeOff className="h-3 w-3" /> Hidden Snippet
-                          </div>
-                      )}
-                    <div className={`bg-muted/30 rounded-md p-3 border ${isPrivacyMode ? "blur-md hover:blur-none transition-all duration-300 select-none hover:select-text" : ""}`}>
-                      <pre className="whitespace-pre-wrap font-mono text-sm break-words">
-                        {selectedSnippet?.content}
-                      </pre>
-                    </div>
-                    {selectedSnippet?.tags.length ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedSnippet.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="px-2 py-0.5 bg-secondary rounded-full text-xs text-secondary-foreground border cursor-pointer hover:bg-secondary/80"
-                            onClick={() => {
-                                setSelectedTag(tag);
-                                setShowHidden(false);
-                                setIsDialogOpen(false);
-                            }}
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                )}
-              </div>
-
-              <DialogFooter className="gap-2 sm:gap-0 pt-2 mt-auto border-t">
-                {!isEditing && selectedSnippet ? (
-                  <div className="flex w-full justify-between items-center">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleCopy(selectedSnippet.content)}
-                    >
-                      <Copy className="mr-2 h-3 w-3" /> Copy Content
-                    </Button>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={(e) => handleDelete(selectedSnippet.id, e)}
-                      >
-                        Delete
-                      </Button>
-                      <Button onClick={() => setIsEditing(true)} size="sm">
-                        <Pencil className="mr-2 h-3 w-3" /> Edit
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex w-full justify-end gap-2">
-                    {selectedSnippet && (
-                      <Button variant="ghost" onClick={() => setIsEditing(false)}>
-                        Cancel
-                      </Button>
-                    )}
-                    <Button onClick={handleSave}>Save</Button>
-                  </div>
-                )}
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </main>
+
+        {/* Snippet Editor Sidebar */}
+        {isEditorOpen && (
+             <div className="border-l bg-background h-screen sticky top-0 w-full md:w-[50%] shadow-xl z-30 transition-all duration-300 ease-in-out flex flex-col">
+                <SnippetEditor 
+                    snippet={selectedSnippet}
+                    onSave={handleSaveSnippet}
+                    onCancel={() => setIsEditorOpen(false)}
+                    onDelete={selectedSnippet ? (id) => handleDelete(id) : undefined}
+                />
+             </div>
+        )}
 
         {/* Embedded Smart Editor */}
         {isSmartEditorOpen && (
-          <div className="lg:h-[calc(100vh)] lg:sticky lg:top-0 lg:right-0 lg:shrink-0 lg:z-20 lg:shadow-xl">
+          <div className="border-l bg-background h-screen sticky top-0 w-full md:w-[50%] shadow-xl z-30 transition-all duration-300 ease-in-out flex flex-col">
             <SmartEditor 
                 isOpen={true}
                 onClose={() => setIsSmartEditorOpen(false)} 
