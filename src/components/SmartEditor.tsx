@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import { HighlightedTextarea } from "@/components/ui/highlighted-textarea";
 import { Button } from "@/components/ui/button";
 import { Snippet } from "@/types";
 import { Sparkles, X, Copy, Bot, Loader2 } from "lucide-react";
@@ -123,14 +124,16 @@ export function SmartEditor({ isOpen, onClose, snippets }: SmartEditorProps) {
       
       <div className="flex-1 relative flex flex-col overflow-hidden">
         <div className={`relative flex flex-col transition-all duration-300 ${showGemini ? "h-1/2 border-b" : "h-full"}`}>
-          <Textarea
-            ref={textareaRef}
-            value={text}
-            onChange={handleInputChange}
-            onSelect={handleSelect}
-            className="flex-1 resize-none border-none focus-visible:ring-0 p-4 text-base leading-relaxed rounded-none"
-            placeholder="Type @ to insert a snippet..."
-          />
+          <div className="flex-1 relative w-full min-h-0">
+            <HighlightedTextarea
+              ref={textareaRef}
+              value={text}
+              onChange={handleInputChange}
+              onSelect={handleSelect}
+              className="w-full h-full resize-none border-none focus-visible:ring-0 p-4 text-base leading-relaxed rounded-none font-sans"
+              placeholder="Type @ to insert a snippet... Use {{variable}} for dynamic values."
+            />
+          </div>
           
           {/* Suggestions Popup */}
           {suggestions.length > 0 && (

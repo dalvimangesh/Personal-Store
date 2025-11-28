@@ -6,3 +6,10 @@ export interface Snippet {
   isHidden?: boolean;
   createdAt: Date;
 }
+
+export interface Drop {
+  id: string;
+  content: string;
+  createdAt: Date;
+  sender?: string;
+}

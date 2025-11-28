@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Snippet } from "@/types";
-import { X, Save, Trash2, EyeOff, Eye, Tag } from "lucide-react";
+import { X, Save, Trash2, EyeOff, Eye, Tag, Braces } from "lucide-react";
 import { toast } from "sonner";
+import { HighlightedTextarea } from "@/components/ui/highlighted-textarea";
 
 interface SnippetEditorProps {
   snippet?: Snippet | null;
@@ -16,10 +16,25 @@ interface SnippetEditorProps {
 }
 
 export function SnippetEditor({ snippet, onSave, onCancel, onDelete }: SnippetEditorProps) {
-  const [title, setTitle] = useState(snippet?.title || "");
-  const [content, setContent] = useState(snippet?.content || "");
-  const [tags, setTags] = useState(snippet?.tags.join(", ") || "");
-  const [isHidden, setIsHidden] = useState(snippet?.isHidden || false);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [tags, setTags] = useState("");
+  const [isHidden, setIsHidden] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (snippet) {
+      setTitle(snippet.title);
+      setContent(snippet.content);
+      setTags(snippet.tags.join(", "));
+      setIsHidden(snippet.isHidden || false);
+    } else {
+      setTitle("");
+      setContent("");
+      setTags("");
+      setIsHidden(false);
+    }
+  }, [snippet]);
 
   const handleSave = () => {
     if (!title.trim() || !content.trim()) {
@@ -38,6 +53,26 @@ export function SnippetEditor({ snippet, onSave, onCancel, onDelete }: SnippetEd
       tags: tagsArray,
       isHidden,
     });
+  };
+
+  const insertVariable = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const variablePlaceholder = "{{variable}}";
+
+    const newContent = content.substring(0, start) + variablePlaceholder + content.substring(end);
+    setContent(newContent);
+
+    // Set focus and select the 'variable' part so user can type name immediately
+    setTimeout(() => {
+      textarea.focus();
+      const selectionStart = start + 2;
+      const selectionEnd = selectionStart + 8; // length of "variable"
+      textarea.setSelectionRange(selectionStart, selectionEnd);
+    }, 0);
   };
 
   return (
@@ -107,13 +142,28 @@ export function SnippetEditor({ snippet, onSave, onCancel, onDelete }: SnippetEd
           </div>
 
           {/* Content Editor */}
-          <div className="min-h-[400px] border rounded-md p-4 focus-within:ring-1 focus-within:ring-ring transition-all">
-             <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="min-h-[400px] w-full resize-none border-none shadow-none focus-visible:ring-0 p-0 font-mono text-sm leading-relaxed bg-transparent"
-              placeholder="Type your snippet content here..."
-            />
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-end">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={insertVariable} 
+                className="h-7 text-xs"
+                title="Insert a variable placeholder like {{name}}"
+              >
+                <Braces className="h-3 w-3 mr-1" />
+                Insert Variable
+              </Button>
+            </div>
+            <div className="min-h-[400px] border rounded-md p-4 focus-within:ring-1 focus-within:ring-ring transition-all bg-card">
+               <HighlightedTextarea
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="min-h-[400px] w-full resize-none border-none shadow-none focus-visible:ring-0 p-0 font-mono text-sm leading-relaxed bg-transparent"
+                placeholder="Type your snippet content here... Use {{variable}} for dynamic values."
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -133,4 +183,3 @@ export function SnippetEditor({ snippet, onSave, onCancel, onDelete }: SnippetEd
     </div>
   );
 }
-

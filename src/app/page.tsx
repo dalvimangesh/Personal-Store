@@ -23,6 +23,8 @@ import { SmartEditor } from "@/components/SmartEditor";
 import { QuickClipboardEditor } from "@/components/QuickClipboardEditor";
 import { LinkShareEditor } from "@/components/LinkShareEditor";
 import { SnippetEditor } from "@/components/SnippetEditor";
+import { DropzoneManager } from "@/components/DropzoneManager";
+import { Inbox } from "lucide-react";
 
 // Privacy Context
 const PrivacyContext = createContext<{
@@ -37,10 +39,10 @@ interface TagSidebarProps {
   uniqueTags: string[];
   selectedTag: string | null;
   showHidden: boolean;
-  currentView: 'snippets' | 'quick-clip' | 'link-share';
+  currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone';
   onSelectTag: (tag: string | null) => void;
   onToggleHidden: (show: boolean) => void;
-  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share') => void;
+  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone') => void;
 }
 
 const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
@@ -56,7 +58,7 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelect
             onClick={() => onViewChange('quick-clip')}
         >
             <Clipboard className="mr-2 h-4 w-4" />
-            Quick Clipboard
+            Clipboard Store
         </Button>
         <Button
             variant={currentView === 'link-share' ? "secondary" : "ghost"}
@@ -65,6 +67,14 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelect
         >
             <Link2 className="mr-2 h-4 w-4" />
             Link Store
+        </Button>
+        <Button
+            variant={currentView === 'dropzone' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('dropzone')}
+        >
+            <Inbox className="mr-2 h-4 w-4" />
+            Dropzone
         </Button>
       </div>
 
@@ -131,7 +141,7 @@ export default function Home() {
     updateSnippet,
     deleteSnippet,
   } = useSnippets();
-  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share'>('snippets');
+  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share' | 'dropzone'>('snippets');
   const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSmartEditorOpen, setIsSmartEditorOpen] = useState(false);
@@ -225,7 +235,7 @@ export default function Home() {
   };
 
   // Helper to switch views
-  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share') => {
+  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone') => {
       setCurrentView(view);
       if (view !== 'snippets') {
           setIsEditorOpen(false);
@@ -252,7 +262,7 @@ export default function Home() {
 
       {/* Main Content Area - Using Flex to adjust width when editor is open */}
       <div className="flex flex-1 min-w-0 overflow-hidden">
-        <main className="flex-1 p-4 md:p-8 min-w-0 w-full flex flex-col overflow-y-auto h-screen">
+        <main className={`flex-1 p-4 md:p-8 min-w-0 w-full flex flex-col ${currentView === 'dropzone' ? 'overflow-hidden h-[100dvh]' : 'overflow-y-auto h-screen'}`}>
           <header className="flex flex-col gap-4 mb-6 shrink-0">
             <div className="flex items-center justify-between md:hidden">
               <h1 className="text-xl font-bold tracking-tight">Personal Store</h1>
@@ -362,8 +372,12 @@ export default function Home() {
                 <QuickClipboardEditor />
             </div>
           ) : currentView === 'link-share' ? (
-             <div className="flex-1 h-full min-h-[500px]">
+             <div className="flex-1 h-full min-h-[500px] w-full">
                 <LinkShareEditor />
+             </div>
+          ) : currentView === 'dropzone' ? (
+             <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden">
+                <DropzoneManager />
              </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 pb-20">
