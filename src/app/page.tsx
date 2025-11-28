@@ -73,7 +73,7 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelect
             onClick={() => onViewChange('link-share')}
         >
             <Link2 className="mr-2 h-4 w-4" />
-            Link Share
+            Link Store
         </Button>
       </div>
 
