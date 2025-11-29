@@ -4,8 +4,6 @@ A modern, all-in-one personal dashboard for managing your digital life. Keep you
 
 Stop cluttering your chat apps with self-messages. Seamlessly share information between your mobile and PC without the mess.
 
-![Personal Store](public/window.svg)
-
 🔗 **Live Demo:** [https://personal-store-alpha.vercel.app](https://personal-store-alpha.vercel.app)
 
 ## Features
