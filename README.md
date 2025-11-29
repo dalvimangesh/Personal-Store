@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Personal Store
+
+A modern, all-in-one personal dashboard for managing your digital life. Keep your snippets, links, clipboard history, and files organized in one secure place with AI superpowers.
+
+Stop cluttering your chat apps with self-messages. Seamlessly share information between your mobile and PC without the mess.
+
+🔗 **Live:** [https://personal-store-alpha.vercel.app](https://personal-store-alpha.vercel.app)
+
+## Features
+
+- **📝 Snippet Store:** Organize code and text snippets with tags, search, and privacy controls.
+- **📋 Clipboard Store:** Quick access to your temporary clipboard history.
+- **🔗 Link Store:** Save, manage, and share important links.
+- **📦 Drop Store:** Text management for easy sharing.
+- **🌍 Public Store:** Share snippets with the world or restrict access to specific users.
+- **✨ Smart Editor:** AI-powered editing and generation using Google Gemini.
+- **👁️ Privacy Mode:** One-click privacy mode to blur sensitive content when screen sharing.
+- **🗑️ Trash Store:** Safety net for deleted items with restore capability.
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router)
+- **UI Library:** React 19 & Tailwind CSS 4
+- **Database:** MongoDB (Mongoose)
+- **AI:** Google Generative AI (Gemini)
+- **Icons:** Lucide React
+- **Components:** Radix UI & Custom Components
 
 ## Getting Started
 
-First, run the development server:
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/personal-store.git
+   cd personal-store
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. **Set up environment variables**
+   Create a `.env` file with your MongoDB URI and Google Gemini API key.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+4. **Run the development server**
+   ```bash
+   npm run dev
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+5. **Open [http://localhost:9999](http://localhost:9999)**
 
-## Learn More
+## License
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
