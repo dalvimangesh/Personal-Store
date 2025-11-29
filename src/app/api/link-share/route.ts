@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/db';
 import LinkShare from '@/models/LinkShare';
+import DeletedItem from '@/models/DeletedItem';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
@@ -42,6 +43,35 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const userId = session.userId;
+    
+    // Detect deleted items
+    const currentLinkShare = await LinkShare.findOne({ userId });
+    if (currentLinkShare && currentLinkShare.items) {
+      const newItemsIds = new Set(
+        body.items
+          .filter((item: any) => item._id)
+          .map((item: any) => item._id.toString())
+      );
+
+      const deletedItems = currentLinkShare.items.filter((item: any) => 
+        item._id && !newItemsIds.has(item._id.toString())
+      );
+
+      if (deletedItems.length > 0) {
+        await DeletedItem.insertMany(
+          deletedItems.map((item: any) => ({
+            userId,
+            originalId: item._id.toString(),
+            type: 'link',
+            content: { 
+                title: item.label || "No Label", 
+                content: item.value,
+                ...item
+            }
+          }))
+        );
+      }
+    }
     
     // Expecting items array
     const linkShare = await LinkShare.findOneAndUpdate(

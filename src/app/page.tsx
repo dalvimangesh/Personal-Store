@@ -2,7 +2,7 @@
 
 import { useState, useMemo, createContext } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2 } from "lucide-react";
+import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -18,12 +18,15 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useSnippets } from "@/hooks/useSnippets";
-import { Snippet } from "@/types";
+import { useSharedSnippets } from "@/hooks/useSharedSnippets";
+import { Snippet, SharedSnippet } from "@/types";
 import { SmartEditor } from "@/components/SmartEditor";
 import { QuickClipboardEditor } from "@/components/QuickClipboardEditor";
 import { LinkShareEditor } from "@/components/LinkShareEditor";
 import { SnippetEditor } from "@/components/SnippetEditor";
+import { SharedSnippetEditor } from "@/components/SharedSnippetEditor";
 import { DropzoneManager } from "@/components/DropzoneManager";
+import { TrashStore } from "@/components/TrashStore";
 import { Inbox } from "lucide-react";
 
 // Privacy Context
@@ -39,10 +42,10 @@ interface TagSidebarProps {
   uniqueTags: string[];
   selectedTag: string | null;
   showHidden: boolean;
-  currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone';
+  currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store';
   onSelectTag: (tag: string | null) => void;
   onToggleHidden: (show: boolean) => void;
-  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone') => void;
+  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store') => void;
 }
 
 const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
@@ -74,14 +77,25 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelect
             onClick={() => onViewChange('dropzone')}
         >
             <Inbox className="mr-2 h-4 w-4" />
-            Dropzone
+            Drop Store
         </Button>
-      </div>
+        <Button
+            variant={currentView === 'public-store' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('public-store')}
+        >
+            <Globe className="mr-2 h-4 w-4" />
+            Public Store
+        </Button>
+        <Button
+            variant={currentView === 'trash' ? "secondary" : "ghost"}
+            className="w-full justify-start text-black hover:text-black dark:text-white dark:hover:text-white"
+            onClick={() => onViewChange('trash')}
+        >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Trash Store
+        </Button>
 
-      <h2 className="mt-6 mb-2 px-4 text-lg font-semibold tracking-tight">
-        Filters
-      </h2>
-      <div className="space-y-1">
         <Button
           variant={currentView === 'snippets' && selectedTag === null && !showHidden ? "secondary" : "ghost"}
           className="w-full justify-start"
@@ -91,41 +105,39 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelect
               onToggleHidden(false);
           }}
         >
-          <Tag className="mr-2 h-4 w-4" />
-          All Snippets
+          <StickyNote className="mr-2 h-4 w-4" />
+          Snippet Store
         </Button>
-        <Button
-            variant={currentView === 'snippets' && showHidden ? "secondary" : "ghost"}
-            className="w-full justify-start text-muted-foreground hover:text-foreground"
-            onClick={() => {
-                onViewChange('snippets');
-                onToggleHidden(true);
-            }}
-        >
-            <EyeOff className="mr-2 h-4 w-4" />
-            Hidden Snippets
-        </Button>
-      </div>
 
-      <h2 className="mt-6 mb-2 px-4 text-lg font-semibold tracking-tight">
-        Tags
-      </h2>
-      <div className="space-y-1">
-        {uniqueTags.map((tag) => (
-          <Button
-            key={tag}
-            variant={currentView === 'snippets' && selectedTag === tag ? "secondary" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => {
-                onViewChange('snippets');
-                onSelectTag(tag);
-                onToggleHidden(false);
-            }}
-          >
-            <Tag className="mr-2 h-4 w-4" />
-            {tag}
-          </Button>
-        ))}
+        <div className="space-y-1 pl-4">
+            <Button
+                variant={currentView === 'snippets' && showHidden ? "secondary" : "ghost"}
+                className="w-full justify-start text-muted-foreground hover:text-foreground h-8"
+                onClick={() => {
+                    onViewChange('snippets');
+                    onToggleHidden(true);
+                }}
+            >
+                <EyeOff className="mr-2 h-4 w-4" />
+                Hidden Snippets
+            </Button>
+            
+            {uniqueTags.map((tag) => (
+              <Button
+                key={tag}
+                variant={currentView === 'snippets' && selectedTag === tag ? "secondary" : "ghost"}
+                className="w-full justify-start h-8"
+                onClick={() => {
+                    onViewChange('snippets');
+                    onSelectTag(tag);
+                    onToggleHidden(false);
+                }}
+              >
+                <Tag className="mr-2 h-4 w-4" />
+                {tag}
+              </Button>
+            ))}
+        </div>
       </div>
     </div>
   </div>
@@ -141,8 +153,19 @@ export default function Home() {
     updateSnippet,
     deleteSnippet,
   } = useSnippets();
-  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share' | 'dropzone'>('snippets');
+
+  const {
+    snippets: sharedSnippets,
+    searchQuery: sharedSearchQuery,
+    setSearchQuery: setSharedSearchQuery,
+    addSnippet: addSharedSnippet,
+    updateSnippet: updateSharedSnippet,
+    deleteSnippet: deleteSharedSnippet,
+  } = useSharedSnippets();
+
+  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store'>('snippets');
   const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
+  const [selectedSharedSnippet, setSelectedSharedSnippet] = useState<SharedSnippet | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSmartEditorOpen, setIsSmartEditorOpen] = useState(false);
   
@@ -195,6 +218,15 @@ export default function Home() {
     }
   };
 
+  const openSharedEditor = (snippet: SharedSnippet | null = null) => {
+    setSelectedSharedSnippet(snippet);
+    setIsEditorOpen(true);
+    setIsSmartEditorOpen(false);
+    if (currentView !== 'public-store') {
+        setCurrentView('public-store');
+    }
+  };
+
   const handleSaveSnippet = (data: { title: string; content: string; tags: string[]; isHidden: boolean }) => {
     if (selectedSnippet) {
       updateSnippet(selectedSnippet.id, {
@@ -216,10 +248,38 @@ export default function Home() {
     setIsEditorOpen(false);
   };
 
+  const handleSaveSharedSnippet = (data: { title: string; content: string; tags: string[]; allowedUsers: string[] }) => {
+    if (selectedSharedSnippet) {
+      updateSharedSnippet(selectedSharedSnippet.id, {
+        title: data.title,
+        content: data.content,
+        tags: data.tags,
+        allowedUsers: data.allowedUsers,
+      });
+      toast.success("Shared snippet updated!");
+    } else {
+      addSharedSnippet({
+        title: data.title,
+        content: data.content,
+        tags: data.tags,
+        allowedUsers: data.allowedUsers,
+      });
+      toast.success("Shared snippet added!");
+    }
+    setIsEditorOpen(false);
+  };
+
   const handleDelete = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     deleteSnippet(id);
     toast.success("Snippet deleted");
+    if (isEditorOpen) setIsEditorOpen(false);
+  };
+
+  const handleDeleteShared = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    deleteSharedSnippet(id);
+    toast.success("Shared snippet deleted");
     if (isEditorOpen) setIsEditorOpen(false);
   };
 
@@ -235,9 +295,9 @@ export default function Home() {
   };
 
   // Helper to switch views
-  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone') => {
+  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store') => {
       setCurrentView(view);
-      if (view !== 'snippets') {
+      if (view !== 'snippets' && view !== 'public-store') {
           setIsEditorOpen(false);
       }
   };
@@ -302,10 +362,10 @@ export default function Home() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search snippets..."
+                  placeholder={currentView === 'public-store' ? "Search public snippets..." : "Search snippets..."}
                   className="pl-9 h-9 w-full"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={currentView === 'public-store' ? sharedSearchQuery : searchQuery}
+                  onChange={(e) => currentView === 'public-store' ? setSharedSearchQuery(e.target.value) : setSearchQuery(e.target.value)}
                 />
               </div>
               <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-start">
@@ -341,9 +401,15 @@ export default function Home() {
                       <LogOut className="h-4 w-4" />
                   </Button>
                 </div>
-                <Button onClick={() => openEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
-                  <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Snippet</span><span className="sm:hidden">Add</span>
-                </Button>
+                {currentView === 'public-store' ? (
+                    <Button onClick={() => openSharedEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
+                        <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Public</span><span className="sm:hidden">Add</span>
+                    </Button>
+                ) : (
+                    <Button onClick={() => openEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
+                        <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Snippet</span><span className="sm:hidden">Add</span>
+                    </Button>
+                )}
               </div>
             </div>
             {(selectedTag || showHidden) && (
@@ -379,6 +445,76 @@ export default function Home() {
              <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden">
                 <DropzoneManager />
              </div>
+          ) : currentView === 'trash' ? (
+             <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden overflow-y-auto">
+                <TrashStore />
+             </div>
+          ) : currentView === 'public-store' ? (
+            <div className="grid grid-cols-1 gap-3 pb-20">
+            {sharedSnippets.map((snippet) => (
+              <Card
+                key={snippet.id}
+                className={`group relative flex flex-row items-center hover:border-primary/50 transition-colors cursor-pointer p-3 ${selectedSharedSnippet?.id === snippet.id && isEditorOpen ? 'border-primary bg-secondary/20' : ''}`}
+                onClick={() => openSharedEditor(snippet)}
+              >
+                <div className="flex-1 min-w-0 mr-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className={`text-sm font-medium leading-none truncate ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}>
+                      {snippet.title}
+                    </h3>
+                     {snippet.allowedUsers.length === 0 ? (
+                         <span className="text-[10px] bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 px-1.5 rounded-full">Public</span>
+                     ) : (
+                         <span className="text-[10px] bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 px-1.5 rounded-full">Restricted</span>
+                     )}
+                  </div>
+                  <p className={`text-xs text-muted-foreground line-clamp-1 mb-2 ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300 select-none" : ""}`}>
+                    {snippet.content}
+                  </p>
+                  <div className="flex gap-1">
+                    {snippet.tags.slice(0, 3).map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center rounded-sm border px-1.5 py-0.5 text-[10px] font-medium bg-secondary text-secondary-foreground"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                    {snippet.tags.length > 3 && (
+                      <span className="text-[10px] text-muted-foreground self-center">
+                        +{snippet.tags.length - 3}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => handleCopy(snippet.content, e)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:text-destructive opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => handleDeleteShared(snippet.id, e)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </Card>
+            ))}
+
+            {sharedSnippets.length === 0 && (
+              <div className="col-span-full text-center py-12 text-sm text-muted-foreground">
+                No public snippets found.
+              </div>
+            )}
+          </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 pb-20">
             {displayedSnippets.map((snippet) => (
@@ -452,13 +588,23 @@ export default function Home() {
         </main>
 
         {/* Snippet Editor Sidebar */}
-        {isEditorOpen && (
+        {isEditorOpen && currentView === 'snippets' && (
              <div className="border-l bg-background h-screen sticky top-0 w-full md:w-[50%] shadow-xl z-30 transition-all duration-300 ease-in-out flex flex-col">
                 <SnippetEditor 
                     snippet={selectedSnippet}
                     onSave={handleSaveSnippet}
                     onCancel={() => setIsEditorOpen(false)}
                     onDelete={selectedSnippet ? (id) => handleDelete(id) : undefined}
+                />
+             </div>
+        )}
+        {isEditorOpen && currentView === 'public-store' && (
+             <div className="border-l bg-background h-screen sticky top-0 w-full md:w-[50%] shadow-xl z-30 transition-all duration-300 ease-in-out flex flex-col">
+                <SharedSnippetEditor 
+                    snippet={selectedSharedSnippet}
+                    onSave={handleSaveSharedSnippet}
+                    onCancel={() => setIsEditorOpen(false)}
+                    onDelete={selectedSharedSnippet ? (id) => handleDeleteShared(id) : undefined}
                 />
              </div>
         )}

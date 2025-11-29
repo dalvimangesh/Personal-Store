@@ -7,6 +7,17 @@ export interface Snippet {
   createdAt: Date;
 }
 
+export interface SharedSnippet {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  allowedUsers: string[];
+  createdAt: Date;
+  isOwner?: boolean;
+  author?: string;
+}
+
 export interface Drop {
   id: string;
   content: string;

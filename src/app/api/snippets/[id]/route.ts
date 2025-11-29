@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/db';
 import Snippet from '@/models/Snippet';
+import DeletedItem from '@/models/DeletedItem';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
@@ -66,11 +67,25 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const result = await Snippet.deleteOne({ _id: id, userId: session.userId });
-    
-    if (result.deletedCount === 0) {
+    const snippet = await Snippet.findOne({ _id: id, userId: session.userId });
+
+    if (!snippet) {
       return NextResponse.json({ success: false, error: 'Snippet not found or unauthorized' }, { status: 404 });
     }
+
+    // Move to trash
+    await DeletedItem.create({
+      userId: session.userId,
+      originalId: id,
+      type: 'snippet',
+      content: {
+        title: snippet.title,
+        content: snippet.content,
+        ...snippet.toObject()
+      },
+    });
+
+    await Snippet.deleteOne({ _id: id });
     
     return NextResponse.json({ success: true, data: {} });
   } catch (error) {
