@@ -1,7 +1,5 @@
 # Personal Store
 
-A modern, all-in-one personal dashboard for managing your digital life. Keep your snippets, links, clipboard history, and files organized in one secure place with AI superpowers.
-
 Stop cluttering your chat apps with self-messages. Seamlessly share information between your mobile and PC without the mess.
 
 🔗 **Live:** [https://personal-store-alpha.vercel.app](https://personal-store-alpha.vercel.app)
