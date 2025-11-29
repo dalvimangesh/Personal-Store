@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, createContext } from "react";
+import { useState, useMemo, createContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe } from "lucide-react";
+import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import { SnippetEditor } from "@/components/SnippetEditor";
 import { SharedSnippetEditor } from "@/components/SharedSnippetEditor";
 import { DropzoneManager } from "@/components/DropzoneManager";
 import { TrashStore } from "@/components/TrashStore";
+import { UserProfileDialog } from "@/components/UserProfileDialog";
 import { Inbox } from "lucide-react";
 
 // Privacy Context
@@ -171,10 +172,22 @@ export default function Home() {
   
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
   
   // Privacy Mode State
   const [isPrivacyMode, setIsPrivacyMode] = useState(false);
   const togglePrivacyMode = () => setIsPrivacyMode(!isPrivacyMode);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) {
+          setUsername(data.user.username);
+        }
+      })
+      .catch((err) => console.error("Failed to fetch user", err));
+  }, []);
 
   const uniqueTags = useMemo(() => {
     const tags = new Set<string>();
@@ -305,19 +318,31 @@ export default function Home() {
   return (
     <PrivacyContext.Provider value={{ isPrivacyMode, togglePrivacyMode }}>
     <div className="min-h-screen bg-background flex">
-      <aside className="hidden md:block w-64 border-r min-h-screen p-4">
+      <aside className="hidden md:flex flex-col w-64 border-r min-h-screen p-4">
         <div className="mb-6 px-4">
           <h1 className="text-xl font-bold tracking-tight">Personal Store</h1>
         </div>
-        <TagSidebar 
-            uniqueTags={uniqueTags} 
-            selectedTag={selectedTag} 
-            showHidden={showHidden}
-            currentView={currentView}
-            onSelectTag={setSelectedTag} 
-            onToggleHidden={setShowHidden}
-            onViewChange={handleViewChange}
-        />
+        <div className="flex-1">
+            <TagSidebar 
+                uniqueTags={uniqueTags} 
+                selectedTag={selectedTag} 
+                showHidden={showHidden}
+                currentView={currentView}
+                onSelectTag={setSelectedTag} 
+                onToggleHidden={setShowHidden}
+                onViewChange={handleViewChange}
+            />
+        </div>
+        {username && (
+            <div className="mt-auto border-t pt-4 px-2">
+                <UserProfileDialog username={username} onUpdate={setUsername}>
+                     <Button variant="ghost" className="w-full justify-start gap-2">
+                        <User className="h-4 w-4" />
+                        <span className="truncate">{username}</span>
+                    </Button>
+                </UserProfileDialog>
+            </div>
+        )}
       </aside>
 
       {/* Main Content Area - Using Flex to adjust width when editor is open */}
@@ -336,22 +361,34 @@ export default function Home() {
                   <SheetHeader>
                     <SheetTitle>Menu</SheetTitle>
                   </SheetHeader>
-                  <div className="py-4">
-                    <TagSidebar 
-                      uniqueTags={uniqueTags} 
-                      selectedTag={selectedTag}
-                      showHidden={showHidden}
-                      currentView={currentView}
-                      onSelectTag={(tag) => {
-                          setSelectedTag(tag);
-                          setShowHidden(false);
-                      }}
-                      onToggleHidden={(hidden) => {
-                          setShowHidden(hidden);
-                          setSelectedTag(null);
-                      }}
-                      onViewChange={handleViewChange}
-                    />
+                  <div className="py-4 flex flex-col h-full">
+                    <div className="flex-1">
+                        <TagSidebar 
+                        uniqueTags={uniqueTags} 
+                        selectedTag={selectedTag}
+                        showHidden={showHidden}
+                        currentView={currentView}
+                        onSelectTag={(tag) => {
+                            setSelectedTag(tag);
+                            setShowHidden(false);
+                        }}
+                        onToggleHidden={(hidden) => {
+                            setShowHidden(hidden);
+                            setSelectedTag(null);
+                        }}
+                        onViewChange={handleViewChange}
+                        />
+                    </div>
+                    {username && (
+                        <div className="mt-auto border-t pt-4">
+                             <UserProfileDialog username={username} onUpdate={setUsername}>
+                                 <Button variant="ghost" className="w-full justify-start gap-2">
+                                    <User className="h-4 w-4" />
+                                    <span className="truncate">{username}</span>
+                                </Button>
+                            </UserProfileDialog>
+                        </div>
+                    )}
                   </div>
                 </SheetContent>
               </Sheet>
