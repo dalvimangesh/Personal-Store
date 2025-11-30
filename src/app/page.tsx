@@ -2,7 +2,7 @@
 
 import { useState, useMemo, createContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User } from "lucide-react";
+import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,8 @@ import { SharedSnippetEditor } from "@/components/SharedSnippetEditor";
 import { DropzoneManager } from "@/components/DropzoneManager";
 import { TrashStore } from "@/components/TrashStore";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
-import { Inbox } from "lucide-react";
+import { Inbox, Info } from "lucide-react";
+import { FeaturesList } from "@/components/FeaturesList";
 
 // Privacy Context
 const PrivacyContext = createContext<{
@@ -39,14 +40,14 @@ const PrivacyContext = createContext<{
   togglePrivacyMode: () => {},
 });
 
-interface TagSidebarProps {
+  interface TagSidebarProps {
   uniqueTags: string[];
   selectedTag: string | null;
   showHidden: boolean;
-  currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store';
+  currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about';
   onSelectTag: (tag: string | null) => void;
   onToggleHidden: (show: boolean) => void;
-  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store') => void;
+  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about') => void;
 }
 
 const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
@@ -164,7 +165,7 @@ export default function Home() {
     deleteSnippet: deleteSharedSnippet,
   } = useSharedSnippets();
 
-  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store'>('snippets');
+  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about'>('snippets');
   const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
   const [selectedSharedSnippet, setSelectedSharedSnippet] = useState<SharedSnippet | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -308,7 +309,7 @@ export default function Home() {
   };
 
   // Helper to switch views
-  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store') => {
+  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about') => {
       setCurrentView(view);
       if (view !== 'snippets' && view !== 'public-store') {
           setIsEditorOpen(false);
@@ -332,9 +333,19 @@ export default function Home() {
                 onToggleHidden={setShowHidden}
                 onViewChange={handleViewChange}
             />
+            <div className="px-3 py-2 mt-4">
+                 <Button
+                    variant={currentView === 'about' ? "secondary" : "ghost"}
+                    className="w-full justify-start"
+                    onClick={() => handleViewChange('about')}
+                >
+                    <Info className="mr-2 h-4 w-4" />
+                    This Store
+                </Button>
+            </div>
         </div>
         {username && (
-            <div className="mt-auto border-t pt-4 px-2">
+            <div className="mt-auto border-t pt-4 px-2 space-y-2">
                 <UserProfileDialog username={username} onUpdate={setUsername}>
                      <Button variant="ghost" className="w-full justify-start gap-2">
                         <User className="h-4 w-4" />
@@ -378,9 +389,19 @@ export default function Home() {
                         }}
                         onViewChange={handleViewChange}
                         />
+                        <div className="px-3 py-2 mt-4">
+                             <Button
+                                variant={currentView === 'about' ? "secondary" : "ghost"}
+                                className="w-full justify-start"
+                                onClick={() => handleViewChange('about')}
+                            >
+                                <Info className="mr-2 h-4 w-4" />
+                                About
+                            </Button>
+                        </div>
                     </div>
                     {username && (
-                        <div className="mt-auto border-t pt-4">
+                        <div className="mt-auto border-t pt-4 space-y-2">
                              <UserProfileDialog username={username} onUpdate={setUsername}>
                                  <Button variant="ghost" className="w-full justify-start gap-2">
                                     <User className="h-4 w-4" />
@@ -485,6 +506,44 @@ export default function Home() {
           ) : currentView === 'trash' ? (
              <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden overflow-y-auto">
                 <TrashStore />
+             </div>
+          ) : currentView === 'about' ? (
+            <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden overflow-y-auto p-6">
+                <div className="max-w-4xl mx-auto space-y-8">
+                    <div className="space-y-4">
+                        <h1 className="text-4xl font-bold tracking-tight">Personal Store</h1>
+                        <p className="text-xl text-muted-foreground">
+                            Your centralized clipboard vault for snippets, links, and seamless sharing.
+                        </p>
+                    </div>
+
+                    <div className="grid gap-8">
+                        <section className="space-y-4">
+                            <h2 className="text-2xl font-semibold">Features</h2>
+                            <div className="grid sm:grid-cols-2 gap-4 border rounded-lg p-6 bg-card">
+                                <FeaturesList />
+                            </div>
+                        </section>
+
+                        <section className="space-y-4">
+                            <h2 className="text-2xl font-semibold">Contribute</h2>
+                            <p className="text-muted-foreground">
+                                Personal Store is open source. Contributions, bug reports, and feature requests are welcome.
+                            </p>
+                            <a 
+                                href="https://github.com/dalvimangesh/Personal-Store" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-block"
+                            >
+                                <Button className="gap-2">
+                                    <Github className="h-4 w-4" />
+                                    View on GitHub
+                                </Button>
+                            </a>
+                        </section>
+                    </div>
+                </div>
              </div>
           ) : currentView === 'public-store' ? (
             <div className="grid grid-cols-1 gap-3 pb-20">

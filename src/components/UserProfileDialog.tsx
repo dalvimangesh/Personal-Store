@@ -61,8 +61,9 @@ export function UserProfileDialog({ username, onUpdate, children }: UserProfileD
       onUpdate(data.user.username);
       toast.success("Profile updated successfully");
       setIsOpen(false);
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -82,7 +83,7 @@ export function UserProfileDialog({ username, onUpdate, children }: UserProfileD
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>
-            Update your username or password here. Click save when you're done.
+            Update your username or password here. Click save when you&apos;re done.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
@@ -134,4 +135,3 @@ export function UserProfileDialog({ username, onUpdate, children }: UserProfileD
     </Dialog>
   );
 }
-
