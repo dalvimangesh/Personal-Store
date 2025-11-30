@@ -30,7 +30,9 @@ export interface Todo {
   title: string;
   description?: string;
   priority: number;
+  startDate?: Date;
   deadline?: Date;
-  isCompleted: boolean;
+  isCompleted: boolean; // Keep for backward compatibility if needed, or map to status
+  status: 'todo' | 'in_progress' | 'completed';
   createdAt: Date;
 }

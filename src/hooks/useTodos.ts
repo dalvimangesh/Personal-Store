@@ -25,7 +25,7 @@ export function useTodos() {
     }
   };
 
-  const addTodo = async (todo: Omit<Todo, 'id' | 'createdAt' | 'isCompleted'>) => {
+  const addTodo = async (todo: Omit<Todo, 'id' | 'createdAt' | 'isCompleted' | 'status'> & { isCompleted?: boolean, status?: 'todo' | 'in_progress' | 'completed' }) => {
     try {
       const res = await fetch('/api/todos', {
         method: 'POST',

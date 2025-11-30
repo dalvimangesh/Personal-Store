@@ -186,6 +186,28 @@ export function LinkShareEditor({ searchQuery = "" }: { searchQuery?: string }) 
       }
   }
 
+  const handleOpenCategoryLinks = (category: LinkCategory) => {
+    const validItems = category.items.filter(item => isValidUrl(item.value));
+    
+    if (validItems.length === 0) {
+        toast.info("No valid links to open in this category");
+        return;
+    }
+
+    let blocked = false;
+    // Reverse iteration sometimes helps with focus management, but standard is fine.
+    validItems.forEach(item => {
+        const w = window.open(item.value, '_blank');
+        if (!w) blocked = true;
+    });
+
+    if (blocked) {
+        toast.warning("Some tabs were blocked. Please allow pop-ups for this site.", {
+            duration: 5000,
+        });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -223,6 +245,15 @@ export function LinkShareEditor({ searchQuery = "" }: { searchQuery?: string }) 
                             className="font-semibold text-lg h-auto py-1 px-2 border-transparent hover:border-input focus:border-input bg-transparent w-auto min-w-[150px]"
                             placeholder="Category Name"
                         />
+                         <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground opacity-0 group-hover/cat:opacity-100 transition-opacity" 
+                            onClick={() => handleOpenCategoryLinks(category)} 
+                            title="Open All Links in Category"
+                        >
+                            <ExternalLink className="h-4 w-4" />
+                        </Button>
                          <Button 
                             variant="ghost" 
                             size="icon" 
@@ -293,7 +324,7 @@ export function LinkShareEditor({ searchQuery = "" }: { searchQuery?: string }) 
             })}
         </div>
 
-        <div className="border-t pt-4 mt-4">
+        <div className="border-t pt-4 mt-4 pb-8">
             <Button variant="outline" onClick={handleAddCategory} className="w-full sm:w-auto">
                 <FolderPlus className="h-4 w-4 mr-2" /> Add Category
             </Button>

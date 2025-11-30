@@ -24,8 +24,10 @@ export async function GET() {
       title: doc.title,
       description: doc.description,
       priority: doc.priority,
+      startDate: doc.startDate,
       deadline: doc.deadline,
       isCompleted: doc.isCompleted,
+      status: doc.status || (doc.isCompleted ? 'completed' : 'todo'), // Fallback for existing data
       createdAt: doc.createdAt,
     }));
     return NextResponse.json({ success: true, data: formattedTodos });
@@ -61,8 +63,10 @@ export async function POST(request: Request) {
         title: todo.title,
         description: todo.description,
         priority: todo.priority,
+        startDate: todo.startDate,
         deadline: todo.deadline,
         isCompleted: todo.isCompleted,
+        status: todo.status,
         createdAt: todo.createdAt
       } 
     }, { status: 201 });

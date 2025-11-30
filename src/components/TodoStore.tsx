@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, Clock, Save, Trash2, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Save, Trash2, Plus, ChevronDown, ChevronUp, Circle, PlayCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useTodos } from "@/hooks/useTodos";
@@ -14,6 +13,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -31,7 +37,9 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
   const [newTodoPriority, setNewTodoPriority] = useState(0);
   const [newTodoDescription, setNewTodoDescription] = useState("");
   const [newTodoDeadline, setNewTodoDeadline] = useState<Date | undefined>(undefined);
+  const [newTodoStartDate, setNewTodoStartDate] = useState<Date | undefined>(new Date());
   const [isAddExpanded, setIsAddExpanded] = useState(false);
+  const [newTodoStatus, setNewTodoStatus] = useState<'todo' | 'in_progress' | 'completed'>('todo');
 
   // Edit Todo State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,6 +47,8 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
   const [editPriority, setEditPriority] = useState(0);
   const [editDescription, setEditDescription] = useState("");
   const [editDeadline, setEditDeadline] = useState<Date | undefined>(undefined);
+  const [editStartDate, setEditStartDate] = useState<Date | undefined>(undefined);
+  const [editStatus, setEditStatus] = useState<'todo' | 'in_progress' | 'completed'>('todo');
 
   const handleAddTodo = async () => {
     if (!newTodoTitle.trim()) {
@@ -51,6 +61,9 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
       priority: newTodoPriority,
       description: newTodoDescription,
       deadline: newTodoDeadline,
+      startDate: newTodoStartDate,
+      status: newTodoStatus,
+      isCompleted: newTodoStatus === 'completed',
     });
 
     if (success) {
@@ -58,6 +71,8 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
       setNewTodoPriority(0);
       setNewTodoDescription("");
       setNewTodoDeadline(undefined);
+      setNewTodoStartDate(new Date());
+      setNewTodoStatus('todo');
       setIsAddExpanded(false);
       toast.success("Todo added");
     } else {
@@ -65,9 +80,12 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
     }
   };
 
-  const handleToggleComplete = async (todo: Todo) => {
-    const success = await updateTodo(todo.id, { isCompleted: !todo.isCompleted });
-    if (!success) toast.error("Failed to update todo");
+  const handleStatusChange = async (todo: Todo, newStatus: 'todo' | 'in_progress' | 'completed') => {
+    const success = await updateTodo(todo.id, { 
+        status: newStatus,
+        isCompleted: newStatus === 'completed'
+    });
+    if (!success) toast.error("Failed to update todo status");
   };
 
   const startEditing = (todo: Todo) => {
@@ -76,6 +94,8 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
     setEditPriority(todo.priority);
     setEditDescription(todo.description || "");
     setEditDeadline(todo.deadline ? new Date(todo.deadline) : undefined);
+    setEditStartDate(todo.startDate ? new Date(todo.startDate) : undefined);
+    setEditStatus(todo.status);
   };
 
   const cancelEditing = () => {
@@ -84,6 +104,8 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
     setEditPriority(0);
     setEditDescription("");
     setEditDeadline(undefined);
+    setEditStartDate(undefined);
+    setEditStatus('todo');
   };
 
   const saveEditing = async (id: string) => {
@@ -97,6 +119,9 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
       priority: editPriority,
       description: editDescription,
       deadline: editDeadline,
+      startDate: editStartDate,
+      status: editStatus,
+      isCompleted: editStatus === 'completed',
     });
 
     if (success) {
@@ -188,32 +213,62 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
                     />
                 </div>
                 <div className="space-y-1 min-w-[240px]">
-                    <label className="text-xs font-medium text-muted-foreground ml-1">Deadline</label>
-                        <Popover modal>
-                            <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !newTodoDeadline && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {newTodoDeadline ? format(newTodoDeadline, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={newTodoDeadline}
-                                onSelect={setNewTodoDeadline}
-                                initialFocus
-                            />
-                        </PopoverContent>
-                    </Popover>
+                    <div className="flex flex-col gap-2">
+                        <div className="flex-1">
+                             <label className="text-xs font-medium text-muted-foreground ml-1">Start Date</label>
+                             <Popover modal>
+                                <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !newTodoStartDate && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {newTodoStartDate ? format(newTodoStartDate, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={newTodoStartDate}
+                                    onSelect={setNewTodoStartDate}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                        </div>
+                        <div className="flex-1">
+                             <label className="text-xs font-medium text-muted-foreground ml-1">Deadline</label>
+                             <Popover modal>
+                                <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !newTodoDeadline && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {newTodoDeadline ? format(newTodoDeadline, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={newTodoDeadline}
+                                    onSelect={setNewTodoDeadline}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                        </div>
+                    </div>
+
                      {newTodoDeadline && (
-                        <Button variant="ghost" size="sm" onClick={() => setNewTodoDeadline(undefined)} className="h-6 px-2 text-xs text-muted-foreground">
-                            Clear Date
+                        <Button variant="ghost" size="sm" onClick={() => setNewTodoDeadline(undefined)} className="h-6 px-2 text-xs text-muted-foreground mt-1">
+                            Clear Deadline
                         </Button>
                     )}
                 </div>
@@ -232,7 +287,9 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
             <div
               key={todo.id}
               className={`flex flex-col gap-3 p-3 rounded-lg border transition-colors ${
-                todo.isCompleted ? "bg-muted/30" : "bg-card"
+                todo.status === 'completed' ? "bg-muted/30" : 
+                todo.status === 'in_progress' ? "bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800" :
+                "bg-card"
               } ${editingId === todo.id ? "ring-1 ring-primary" : "hover:bg-accent/5"}`}
             >
               {editingId === todo.id ? (
@@ -240,10 +297,16 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
                 <div className="flex flex-col gap-3">
                     <div className="flex flex-col sm:flex-row gap-3 items-start">
                          <div className="pt-2">
-                            <Checkbox
-                                    checked={todo.isCompleted}
-                                    disabled
-                            />
+                            <Select value={editStatus} onValueChange={(v: 'todo' | 'in_progress' | 'completed') => setEditStatus(v)}>
+                                <SelectTrigger className="w-[140px] h-8">
+                                    <SelectValue placeholder="Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="todo">To Do</SelectItem>
+                                    <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="completed">Completed</SelectItem>
+                                </SelectContent>
+                            </Select>
                          </div>
                          <div className="flex-1 w-full space-y-2">
                              <Input
@@ -259,7 +322,7 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
                                 className="text-sm resize-none min-h-[60px]"
                              />
                          </div>
-                         <div className="w-full sm:w-auto flex flex-row sm:flex-col gap-2">
+                         <div className="w-full sm:w-auto flex flex-col gap-2">
                             <Input
                                 type="number"
                                 min="0"
@@ -277,11 +340,33 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
                                         variant={"outline"}
                                         className={cn(
                                             "w-full justify-start text-left font-normal px-2",
+                                            !editStartDate && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-3 w-3" />
+                                        {editStartDate ? format(editStartDate, "PP") : <span className="text-xs">Start</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar
+                                        mode="single"
+                                        selected={editStartDate}
+                                        onSelect={setEditStartDate}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                            <Popover modal>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                            "w-full justify-start text-left font-normal px-2",
                                             !editDeadline && "text-muted-foreground"
                                         )}
                                     >
                                         <CalendarIcon className="mr-2 h-3 w-3" />
-                                        {editDeadline ? format(editDeadline, "PP") : <span className="text-xs">Date</span>}
+                                        {editDeadline ? format(editDeadline, "PP") : <span className="text-xs">Deadline</span>}
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0">
@@ -309,10 +394,28 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
                 <div className="flex flex-col gap-1">
                     <div className="flex items-start gap-3">
                         <div className="pt-1">
-                            <Checkbox
-                            checked={todo.isCompleted}
-                            onCheckedChange={() => handleToggleComplete(todo)}
-                            />
+                            <Select 
+                                value={todo.status} 
+                                onValueChange={(val: 'todo' | 'in_progress' | 'completed') => handleStatusChange(todo, val)}
+                            >
+                                <SelectTrigger className={`h-8 w-[130px] text-xs ${
+                                    todo.status === 'completed' ? "text-green-600 border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400" :
+                                    todo.status === 'in_progress' ? "text-blue-600 border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400" :
+                                    "text-muted-foreground"
+                                }`}>
+                                    <div className="flex items-center gap-2">
+                                        {todo.status === 'completed' ? <CheckCircle2 className="h-3.5 w-3.5" /> :
+                                         todo.status === 'in_progress' ? <PlayCircle className="h-3.5 w-3.5" /> :
+                                         <Circle className="h-3.5 w-3.5" />}
+                                        <SelectValue />
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="todo">To Do</SelectItem>
+                                    <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="completed">Completed</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         
                         <div 
@@ -320,15 +423,21 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
                             onClick={() => startEditing(todo)}
                         >
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <span className={`text-sm font-medium break-all ${todo.isCompleted ? "text-muted-foreground line-through decoration-muted-foreground/50" : ""}`}>
+                                <span className={`text-sm font-medium break-all ${todo.status === 'completed' ? "text-muted-foreground line-through decoration-muted-foreground/50" : ""}`}>
                                     {todo.title}
                                 </span>
                                 <Badge variant={todo.priority > 5 ? "destructive" : "secondary"} className="h-5 px-1.5 min-w-[1.25rem] flex items-center justify-center rounded-full text-[10px] font-mono shrink-0">
                                     {todo.priority}
                                 </Badge>
+                                {todo.startDate && (
+                                    <Badge variant="outline" className="h-5 gap-1 font-normal text-muted-foreground">
+                                        <CalendarIcon className="h-3 w-3" />
+                                        {format(new Date(todo.startDate), "MMM d")}
+                                    </Badge>
+                                )}
                                 {todo.deadline && (
-                                    <Badge variant="outline" className={`h-5 gap-1 font-normal ${todo.isCompleted ? "text-muted-foreground border-muted" : 
-                                        (new Date(todo.deadline) < new Date() && !todo.isCompleted ? "text-destructive border-destructive" : "text-muted-foreground")
+                                    <Badge variant="outline" className={`h-5 gap-1 font-normal ${todo.status === 'completed' ? "text-muted-foreground border-muted" : 
+                                        (new Date(todo.deadline) < new Date() ? "text-destructive border-destructive" : "text-muted-foreground")
                                     }`}>
                                         <Clock className="h-3 w-3" />
                                         {format(new Date(todo.deadline), "MMM d")}
@@ -336,7 +445,7 @@ export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
                                 )}
                             </div>
                             {todo.description && (
-                                <p className={`text-xs text-muted-foreground whitespace-pre-wrap break-words line-clamp-2 ${todo.isCompleted ? "opacity-70" : ""}`}>
+                                <p className={`text-xs text-muted-foreground whitespace-pre-wrap break-words line-clamp-2 ${todo.status === 'completed' ? "opacity-70" : ""}`}>
                                     {todo.description}
                                 </p>
                             )}

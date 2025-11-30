@@ -1,4 +1,4 @@
-import { Clipboard, Link2, Inbox, Globe, Sparkles, Eye, Trash2, StickyNote } from "lucide-react";
+import { Clipboard, Link2, Inbox, Globe, Sparkles, Eye, Trash2, StickyNote, ListTodo } from "lucide-react";
 
 export function FeaturesList() {
   return (
@@ -10,6 +10,10 @@ export function FeaturesList() {
       <div className="flex items-start gap-2">
         <Clipboard className="h-3 w-3 mt-0.5 shrink-0" />
         <span><strong>Clipboard Store:</strong> Quick clipboard history access.</span>
+      </div>
+      <div className="flex items-start gap-2">
+        <ListTodo className="h-3 w-3 mt-0.5 shrink-0" />
+        <span><strong>Todo Store:</strong> Manage tasks with priority & deadlines.</span>
       </div>
       <div className="flex items-start gap-2">
         <Link2 className="h-3 w-3 mt-0.5 shrink-0" />

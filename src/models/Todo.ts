@@ -4,8 +4,10 @@ export interface ITodo extends Document {
   title: string;
   description?: string;
   priority: number;
+  startDate?: Date;
   deadline?: Date;
   isCompleted: boolean;
+  status: 'todo' | 'in_progress' | 'completed';
   userId: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -16,8 +18,14 @@ const TodoSchema: Schema = new Schema(
     title: { type: String, required: true },
     description: { type: String },
     priority: { type: Number, required: true, min: 0, max: 9, default: 0 },
+    startDate: { type: Date },
     deadline: { type: Date },
     isCompleted: { type: Boolean, default: false },
+    status: { 
+      type: String, 
+      enum: ['todo', 'in_progress', 'completed'], 
+      default: 'todo' 
+    },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   {

@@ -44,8 +44,10 @@ export async function PUT(
         title: todo.title,
         description: todo.description,
         priority: todo.priority,
+        startDate: todo.startDate,
         deadline: todo.deadline,
         isCompleted: todo.isCompleted,
+        status: todo.status,
         createdAt: todo.createdAt
       }
     });
