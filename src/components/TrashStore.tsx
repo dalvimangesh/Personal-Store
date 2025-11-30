@@ -31,7 +31,7 @@ interface DeletedItem {
   createdAt: string;
 }
 
-export function TrashStore() {
+export function TrashStore({ searchQuery = "" }: { searchQuery?: string }) {
   const [items, setItems] = useState<DeletedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -40,6 +40,15 @@ export function TrashStore() {
   useEffect(() => {
     fetchItems();
   }, []);
+
+  const filteredItems = items.filter(item => {
+    const query = searchQuery.toLowerCase();
+    return (
+        item.content.title?.toLowerCase().includes(query) ||
+        item.content.content?.toLowerCase().includes(query) ||
+        item.type.toLowerCase().includes(query)
+    );
+  });
 
   const fetchItems = async () => {
     try {
@@ -126,7 +135,7 @@ export function TrashStore() {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {items.map((item) => (
+                {filteredItems.map((item) => (
                     <Fragment key={item._id}>
                     <TableRow className="group cursor-pointer hover:bg-muted/50" onClick={() => toggleRow(item._id)}>
                          <TableCell>

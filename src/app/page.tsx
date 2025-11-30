@@ -179,6 +179,8 @@ export default function Home() {
   const [isPrivacyMode, setIsPrivacyMode] = useState(false);
   const togglePrivacyMode = () => setIsPrivacyMode(!isPrivacyMode);
 
+  const [genericSearchQuery, setGenericSearchQuery] = useState("");
+
   useEffect(() => {
     fetch("/api/auth/me")
       .then((res) => res.json())
@@ -311,8 +313,14 @@ export default function Home() {
   // Helper to switch views
   const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about') => {
       setCurrentView(view);
+      // Reset search when switching views (optional, but often good UX)
+      // setGenericSearchQuery(""); 
       if (view !== 'snippets' && view !== 'public-store') {
           setIsEditorOpen(false);
+      }
+      if (view !== 'snippets') {
+        setSelectedTag(null);
+        setShowHidden(false);
       }
   };
 
@@ -416,17 +424,30 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col md:flex-row items-center gap-3 md:gap-4 w-full">
+              {currentView !== 'quick-clip' && currentView !== 'about' && (
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder={currentView === 'public-store' ? "Search public snippets..." : "Search snippets..."}
+                  placeholder={
+                      currentView === 'public-store' ? "Search public snippets..." : 
+                      currentView === 'dropzone' ? "Search drops..." :
+                      currentView === 'link-share' ? "Search links..." :
+                      currentView === 'trash' ? "Search trash..." :
+                      "Search snippets..."
+                  }
                   className="pl-9 h-9 w-full"
-                  value={currentView === 'public-store' ? sharedSearchQuery : searchQuery}
-                  onChange={(e) => currentView === 'public-store' ? setSharedSearchQuery(e.target.value) : setSearchQuery(e.target.value)}
+                  value={genericSearchQuery}
+                  onChange={(e) => {
+                      const val = e.target.value;
+                      setGenericSearchQuery(val); // Update global search query
+                      setSearchQuery(val); // Update snippet search query
+                      setSharedSearchQuery(val); // Update public store search query
+                  }}
                 />
               </div>
-              <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-start">
+              )}
+              <div className={`flex items-center gap-2 w-full md:w-auto justify-between ${(currentView === 'quick-clip' || currentView === 'about') ? 'md:justify-end md:ml-auto' : 'md:justify-start'}`}>
                 <div className="flex items-center gap-2">
                   <Button 
                       variant={isPrivacyMode ? "destructive" : "outline"}
@@ -497,15 +518,15 @@ export default function Home() {
             </div>
           ) : currentView === 'link-share' ? (
              <div className="flex-1 h-full min-h-[500px] w-full">
-                <LinkShareEditor />
+                <LinkShareEditor searchQuery={genericSearchQuery} />
              </div>
           ) : currentView === 'dropzone' ? (
              <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden">
-                <DropzoneManager />
+                <DropzoneManager searchQuery={genericSearchQuery} />
              </div>
           ) : currentView === 'trash' ? (
              <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden overflow-y-auto">
-                <TrashStore />
+                <TrashStore searchQuery={genericSearchQuery} />
              </div>
           ) : currentView === 'about' ? (
             <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden overflow-y-auto p-6">

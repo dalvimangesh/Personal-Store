@@ -1,27 +1,55 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+export interface ILinkItem {
+  label: string;
+  value: string;
+}
+
+export interface ILinkCategory {
+  _id?: string;
+  name: string;
+  items: ILinkItem[];
+}
+
 export interface ILinkShare extends Document {
   userId: mongoose.Types.ObjectId;
-  items: {
-    label: string;
-    value: string;
-  }[];
+  items: ILinkItem[]; // Legacy
+  categories: ILinkCategory[];
   updatedAt: Date;
 }
+
+const LinkItemSchema = new Schema({
+  label: { type: String, default: "" },
+  value: { type: String, default: "" }
+});
+
+const LinkCategorySchema = new Schema({
+  name: { type: String, default: "Default" },
+  items: [LinkItemSchema]
+});
 
 const LinkShareSchema: Schema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-    items: [{
-      label: { type: String, default: "" },
-      value: { type: String, default: "" }
-    }],
+    items: [LinkItemSchema], // Keeping for legacy migration
+    categories: {
+      type: [LinkCategorySchema],
+      default: []
+    }
   },
   {
     timestamps: true,
   }
 );
 
+// Handling Hot Reload in Next.js:
+// If the model exists but the schema is old (missing categories), delete it so it recompiles.
+if (mongoose.models.LinkShare) {
+  const schema = mongoose.models.LinkShare.schema;
+  if (!schema.paths['categories']) {
+    delete mongoose.models.LinkShare;
+  }
+}
+
 export default mongoose.models.LinkShare ||
   mongoose.model<ILinkShare>('LinkShare', LinkShareSchema);
-
