@@ -25,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 interface DeletedItem {
   _id: string;
   originalId: string;
-  type: 'drop' | 'snippet' | 'link';
+  type: 'drop' | 'snippet' | 'link' | 'todo';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   content: any;
   createdAt: string;
