@@ -25,7 +25,7 @@ const isValidUrl = (string: string) => {
   }
 }
 
-export function LinkShareEditor({ searchQuery = "" }: { searchQuery?: string }) {
+export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { searchQuery?: string; isPrivacyMode?: boolean }) {
   const [categories, setCategories] = useState<LinkCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -242,7 +242,7 @@ export function LinkShareEditor({ searchQuery = "" }: { searchQuery?: string }) 
                         <Input
                             value={category.name}
                             onChange={(e) => handleCategoryNameChange(originalIndex, e.target.value)}
-                            className="font-semibold text-lg h-auto py-1 px-2 border-transparent hover:border-input focus:border-input bg-transparent w-auto min-w-[150px]"
+                            className={`font-semibold text-lg h-auto py-1 px-2 border-transparent hover:border-input focus:border-input bg-transparent w-auto min-w-[150px] ${isPrivacyMode ? "blur-sm group-hover/cat:blur-none transition-all duration-300" : ""}`}
                             placeholder="Category Name"
                         />
                          <Button 
@@ -280,7 +280,7 @@ export function LinkShareEditor({ searchQuery = "" }: { searchQuery?: string }) 
                                         placeholder="Label"
                                         value={item.label}
                                         onChange={(e) => handleItemChange(originalIndex, originalItemIndex, 'label', e.target.value)}
-                                        className="w-full sm:w-1/4 sm:min-w-[100px]"
+                                        className={`w-full sm:w-1/4 sm:min-w-[100px] ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}
                                     />
                                     <div className="flex gap-2 w-full sm:flex-1">
                                         <div className="relative flex-1">
@@ -288,7 +288,7 @@ export function LinkShareEditor({ searchQuery = "" }: { searchQuery?: string }) 
                                                 placeholder="Paste link or text..."
                                                 value={item.value}
                                                 onChange={(e) => handleItemChange(originalIndex, originalItemIndex, 'value', e.target.value)}
-                                                className={`flex-1 font-mono text-sm ${isUrl ? "text-blue-500 underline decoration-blue-500/30" : ""}`}
+                                                className={`flex-1 font-mono text-sm ${isUrl ? "text-blue-500 underline decoration-blue-500/30" : ""} ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}
                                             />
                                         </div>
                                         

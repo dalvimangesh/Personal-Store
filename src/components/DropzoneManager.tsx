@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-export function DropzoneManager({ searchQuery }: { searchQuery: string }) {
+export function DropzoneManager({ searchQuery, isPrivacyMode = false }: { searchQuery: string; isPrivacyMode?: boolean }) {
   const [drops, setDrops] = useState<Drop[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -147,7 +147,7 @@ export function DropzoneManager({ searchQuery }: { searchQuery: string }) {
                                 <div className="flex items-center justify-between w-full mb-1">
                                     <div className="flex items-center gap-2 font-medium text-sm">
                                         {drop.sender ? (
-                                            <span className="flex items-center gap-1 text-primary">
+                                            <span className={`flex items-center gap-1 text-primary ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}>
                                                 <UserIcon className="h-3 w-3" /> {drop.sender}
                                             </span>
                                         ) : (
@@ -158,7 +158,7 @@ export function DropzoneManager({ searchQuery }: { searchQuery: string }) {
                                         {new Date(drop.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                     </span>
                                 </div>
-                                <p className="text-xs text-muted-foreground line-clamp-2 font-mono">
+                                <p className={`text-xs text-muted-foreground line-clamp-2 font-mono ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}>
                                     {drop.content}
                                 </p>
                             </button>
@@ -232,7 +232,7 @@ export function DropzoneManager({ searchQuery }: { searchQuery: string }) {
                                 <HighlightedTextarea
                                     value={selectedDrop.content}
                                     readOnly
-                                    className="min-h-full w-full resize-none border-none shadow-none focus-visible:ring-0 p-4 md:p-6 font-mono text-sm leading-relaxed bg-transparent"
+                                    className={`min-h-full w-full resize-none border-none shadow-none focus-visible:ring-0 p-4 md:p-6 font-mono text-sm leading-relaxed bg-transparent ${isPrivacyMode ? "blur-sm hover:blur-none transition-all duration-300" : ""}`}
                                 />
                             </CardContent>
                         </Card>

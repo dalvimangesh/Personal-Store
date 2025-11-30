@@ -3,7 +3,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-export function QuickClipboardEditor() {
+export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?: boolean }) {
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -87,7 +87,7 @@ export function QuickClipboardEditor() {
         value={content}
         onChange={handleContentChange}
         placeholder="Type or paste anything here..."
-        className="flex-1 resize-none font-mono text-sm p-4 leading-relaxed border-2 focus-visible:ring-0"
+        className={`flex-1 resize-none font-mono text-sm p-4 leading-relaxed border-2 focus-visible:ring-0 ${isPrivacyMode ? "blur-sm hover:blur-none transition-all duration-300" : ""}`}
         spellCheck={false}
       />
     </div>
