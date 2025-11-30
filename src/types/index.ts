@@ -24,3 +24,13 @@ export interface Drop {
   createdAt: Date;
   sender?: string;
 }
+
+export interface Todo {
+  id: string;
+  title: string;
+  description?: string;
+  priority: number;
+  deadline?: Date;
+  isCompleted: boolean;
+  createdAt: Date;
+}

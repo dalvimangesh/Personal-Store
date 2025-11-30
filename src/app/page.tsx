@@ -2,7 +2,7 @@
 
 import { useState, useMemo, createContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github } from "lucide-react";
+import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import { SnippetEditor } from "@/components/SnippetEditor";
 import { SharedSnippetEditor } from "@/components/SharedSnippetEditor";
 import { DropzoneManager } from "@/components/DropzoneManager";
 import { TrashStore } from "@/components/TrashStore";
+import { TodoStore } from "@/components/TodoStore";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
 import { Inbox, Info } from "lucide-react";
 import { FeaturesList } from "@/components/FeaturesList";
@@ -44,10 +45,10 @@ const PrivacyContext = createContext<{
   uniqueTags: string[];
   selectedTag: string | null;
   showHidden: boolean;
-  currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about';
+  currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo';
   onSelectTag: (tag: string | null) => void;
   onToggleHidden: (show: boolean) => void;
-  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about') => void;
+  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo') => void;
 }
 
 const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
@@ -64,6 +65,14 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelect
         >
             <Clipboard className="mr-2 h-4 w-4" />
             Clipboard Store
+        </Button>
+        <Button
+            variant={currentView === 'todo' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('todo')}
+        >
+            <ListTodo className="mr-2 h-4 w-4" />
+            Todo Store
         </Button>
         <Button
             variant={currentView === 'link-share' ? "secondary" : "ghost"}
@@ -165,7 +174,7 @@ export default function Home() {
     deleteSnippet: deleteSharedSnippet,
   } = useSharedSnippets();
 
-  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about'>('snippets');
+  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo'>('snippets');
   const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
   const [selectedSharedSnippet, setSelectedSharedSnippet] = useState<SharedSnippet | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -311,7 +320,7 @@ export default function Home() {
   };
 
   // Helper to switch views
-  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about') => {
+  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo') => {
       setCurrentView(view);
       // Reset search when switching views (optional, but often good UX)
       // setGenericSearchQuery(""); 
@@ -327,11 +336,11 @@ export default function Home() {
   return (
     <PrivacyContext.Provider value={{ isPrivacyMode, togglePrivacyMode }}>
     <div className="min-h-screen bg-background flex">
-      <aside className="hidden md:flex flex-col w-64 border-r min-h-screen p-4">
-        <div className="mb-6 px-4">
+      <aside className="hidden md:flex flex-col w-64 border-r h-screen p-4 sticky top-0">
+        <div className="mb-6 px-4 shrink-0">
           <h1 className="text-xl font-bold tracking-tight">Personal Store</h1>
         </div>
-        <div className="flex-1">
+        <div className="flex-1 overflow-y-auto">
             <TagSidebar 
                 uniqueTags={uniqueTags} 
                 selectedTag={selectedTag} 
@@ -353,7 +362,7 @@ export default function Home() {
             </div>
         </div>
         {username && (
-            <div className="mt-auto border-t pt-4 px-2 space-y-2">
+            <div className="mt-auto border-t pt-4 px-2 space-y-2 shrink-0">
                 <UserProfileDialog username={username} onUpdate={setUsername}>
                      <Button variant="ghost" className="w-full justify-start gap-2">
                         <User className="h-4 w-4" />
@@ -434,6 +443,7 @@ export default function Home() {
                       currentView === 'dropzone' ? "Search drops..." :
                       currentView === 'link-share' ? "Search links..." :
                       currentView === 'trash' ? "Search trash..." :
+                      currentView === 'todo' ? "Search todos..." :
                       "Search snippets..."
                   }
                   className="pl-9 h-9 w-full"
@@ -484,7 +494,7 @@ export default function Home() {
                     <Button onClick={() => openSharedEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
                         <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Public</span><span className="sm:hidden">Add</span>
                     </Button>
-                ) : (
+                ) : currentView === 'todo' ? null : (
                     <Button onClick={() => openEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
                         <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Snippet</span><span className="sm:hidden">Add</span>
                     </Button>
@@ -516,6 +526,10 @@ export default function Home() {
             <div className="flex-1 h-full min-h-[500px]">
                 <QuickClipboardEditor />
             </div>
+          ) : currentView === 'todo' ? (
+             <div className="flex-1 h-full min-h-[500px] w-full">
+                <TodoStore searchQuery={genericSearchQuery} />
+             </div>
           ) : currentView === 'link-share' ? (
              <div className="flex-1 h-full min-h-[500px] w-full">
                 <LinkShareEditor searchQuery={genericSearchQuery} />

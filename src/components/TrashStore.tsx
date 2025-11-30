@@ -150,7 +150,7 @@ export function TrashStore({ searchQuery = "" }: { searchQuery?: string }) {
                             {item.content.title || "(No Title)"}
                         </TableCell>
                         <TableCell className="max-w-[300px] truncate text-muted-foreground text-sm">
-                             {item.content.content}
+                             {item.type === 'todo' ? item.content.description : item.content.content}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs">
                             {new Date(item.createdAt).toLocaleDateString()} {new Date(item.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
@@ -202,7 +202,9 @@ export function TrashStore({ searchQuery = "" }: { searchQuery?: string }) {
 {JSON.stringify({
     type: item.type,
     title: item.content.title,
-    content: item.content.content
+    content: item.type === 'todo' ? item.content.description : item.content.content,
+    priority: item.type === 'todo' ? item.content.priority : undefined,
+    deadline: item.type === 'todo' ? item.content.deadline : undefined
 }, null, 2)}
                                     </div>
                                 </div>
