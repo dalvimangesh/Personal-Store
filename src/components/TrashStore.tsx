@@ -31,7 +31,7 @@ interface DeletedItem {
   createdAt: string;
 }
 
-export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { searchQuery?: string; isPrivacyMode?: boolean }) {
+export function TrashStore({ searchQuery = "" }: { searchQuery?: string }) {
   const [items, setItems] = useState<DeletedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -146,10 +146,10 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
                                 {item.type}
                             </Badge>
                         </TableCell>
-                        <TableCell className={`font-medium ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}>
+                        <TableCell className="font-medium">
                             {item.content.title || "(No Title)"}
                         </TableCell>
-                        <TableCell className={`max-w-[300px] truncate text-muted-foreground text-sm ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}>
+                        <TableCell className="max-w-[300px] truncate text-muted-foreground text-sm">
                              {item.type === 'todo' ? item.content.description : item.content.content}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs">
@@ -198,7 +198,7 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
                             <TableCell colSpan={6} className="p-4">
                                 <div className="flex flex-col gap-2">
                                     <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Filtered Content Data</div>
-                                    <div className={`bg-background border rounded-md p-4 font-mono text-xs whitespace-pre-wrap max-h-[300px] overflow-auto shadow-inner ${isPrivacyMode ? "blur-sm hover:blur-none transition-all duration-300" : ""}`}>
+                                    <div className="bg-background border rounded-md p-4 font-mono text-xs whitespace-pre-wrap max-h-[300px] overflow-auto shadow-inner">
 {JSON.stringify({
     type: item.type,
     title: item.content.title,

@@ -524,23 +524,23 @@ export default function Home() {
 
           {currentView === 'quick-clip' ? (
             <div className="flex-1 h-full min-h-[500px]">
-                <QuickClipboardEditor isPrivacyMode={isPrivacyMode} />
+                <QuickClipboardEditor />
             </div>
           ) : currentView === 'todo' ? (
              <div className="flex-1 h-full min-h-[500px] w-full">
-                <TodoStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
+                <TodoStore searchQuery={genericSearchQuery} />
              </div>
           ) : currentView === 'link-share' ? (
              <div className="flex-1 h-full min-h-[500px] w-full">
-                <LinkShareEditor searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
+                <LinkShareEditor searchQuery={genericSearchQuery} />
              </div>
           ) : currentView === 'dropzone' ? (
              <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden">
-                <DropzoneManager searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
+                <DropzoneManager searchQuery={genericSearchQuery} />
              </div>
           ) : currentView === 'trash' ? (
              <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden overflow-y-auto">
-                <TrashStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
+                <TrashStore searchQuery={genericSearchQuery} />
              </div>
           ) : currentView === 'about' ? (
             <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden overflow-y-auto p-6">

@@ -24,7 +24,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-export function TodoStore({ searchQuery = "", isPrivacyMode = false }: { searchQuery?: string; isPrivacyMode?: boolean }) {
+export function TodoStore({ searchQuery = "" }: { searchQuery?: string }) {
   const { todos, addTodo, updateTodo, deleteTodo, isLoading, setSearchQuery } = useTodos();
   
   // Sync search query from props to hook
@@ -423,7 +423,7 @@ export function TodoStore({ searchQuery = "", isPrivacyMode = false }: { searchQ
                             onClick={() => startEditing(todo)}
                         >
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <span className={`text-sm font-medium break-all ${todo.status === 'completed' ? "text-muted-foreground line-through decoration-muted-foreground/50" : ""} ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}>
+                                <span className={`text-sm font-medium break-all ${todo.status === 'completed' ? "text-muted-foreground line-through decoration-muted-foreground/50" : ""}`}>
                                     {todo.title}
                                 </span>
                                 <Badge variant={todo.priority > 5 ? "destructive" : "secondary"} className="h-5 px-1.5 min-w-[1.25rem] flex items-center justify-center rounded-full text-[10px] font-mono shrink-0">
@@ -445,7 +445,7 @@ export function TodoStore({ searchQuery = "", isPrivacyMode = false }: { searchQ
                                 )}
                             </div>
                             {todo.description && (
-                                <p className={`text-xs text-muted-foreground whitespace-pre-wrap break-words line-clamp-2 ${todo.status === 'completed' ? "opacity-70" : ""} ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300 select-none" : ""}`}>
+                                <p className={`text-xs text-muted-foreground whitespace-pre-wrap break-words line-clamp-2 ${todo.status === 'completed' ? "opacity-70" : ""}`}>
                                     {todo.description}
                                 </p>
                             )}
