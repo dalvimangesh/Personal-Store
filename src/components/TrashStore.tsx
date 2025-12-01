@@ -4,16 +4,6 @@ import { Loader2, Trash2, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose
-} from "@/components/ui/dialog";
-import {
     Table,
     TableBody,
     TableCell,
@@ -177,33 +167,15 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
             <span className="text-sm text-muted-foreground">{items.length} items</span>
         </div>
         
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button variant="destructive" size="sm" disabled={selectedIds.size === 0 || isBulkDeleting}>
-                    {isBulkDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                    Delete Selected ({selectedIds.size})
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Delete {selectedIds.size} items permanently?</DialogTitle>
-                    <DialogDescription>
-                        This action cannot be undone. This will permanently remove the selected items.
-                    </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button 
-                        variant="destructive"
-                        onClick={handleBulkDelete}
-                    >
-                        Delete Permanently
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+        <Button 
+            variant="destructive" 
+            size="sm" 
+            disabled={selectedIds.size === 0 || isBulkDeleting}
+            onClick={handleBulkDelete}
+        >
+            {isBulkDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+            Delete Selected ({selectedIds.size})
+        </Button>
       </div>
       
       <div className="rounded-md border">
@@ -257,41 +229,22 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
                             {new Date(item.createdAt).toLocaleDateString()} {new Date(item.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                             <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        disabled={deletingId === item._id}
-                                    >
-                                        {deletingId === item._id ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Trash2 className="h-4 w-4" />
-                                        )}
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Delete Permanently?</DialogTitle>
-                                        <DialogDescription>
-                                            This action cannot be undone. This will permanently remove this item.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <DialogFooter>
-                                        <DialogClose asChild>
-                                            <Button variant="outline">Cancel</Button>
-                                        </DialogClose>
-                                        <Button 
-                                            variant="destructive"
-                                            onClick={() => handleDeletePermanently(item._id)}
-                                        >
-                                            Delete Permanently
-                                        </Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                disabled={deletingId === item._id}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeletePermanently(item._id);
+                                }}
+                            >
+                                {deletingId === item._id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                )}
+                            </Button>
                         </TableCell>
                     </TableRow>
                     {expandedRows.has(item._id) && (
