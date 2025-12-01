@@ -2,6 +2,7 @@ import { useState, useEffect, Fragment } from "react";
 import { toast } from "sonner";
 import { Loader2, Trash2, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -35,7 +36,9 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
   const [items, setItems] = useState<DeletedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchItems();
@@ -76,6 +79,11 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
       
       if (res.ok) {
         setItems(prev => prev.filter(item => item._id !== id));
+        setSelectedIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+        });
         toast.success("Item permanently deleted");
       } else {
         toast.error("Failed to delete item");
@@ -88,6 +96,34 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    setIsBulkDeleting(true);
+    try {
+        const res = await fetch("/api/trash", {
+            method: "DELETE",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ids: Array.from(selectedIds) })
+        });
+
+        if (res.ok) {
+            setItems(prev => prev.filter(item => !selectedIds.has(item._id)));
+            setSelectedIds(new Set());
+            toast.success(`Permanently deleted ${selectedIds.size} items`);
+        } else {
+            toast.error("Failed to delete selected items");
+        }
+    } catch (error) {
+        console.error("Error deleting items:", error);
+        toast.error("Failed to delete items");
+    } finally {
+        setIsBulkDeleting(false);
+    }
+  };
+
   const toggleRow = (id: string) => {
     const newExpanded = new Set(expandedRows);
     if (expandedRows.has(id)) {
@@ -96,6 +132,24 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
         newExpanded.add(id);
     }
     setExpandedRows(newExpanded);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredItems.length && filteredItems.length > 0) {
+        setSelectedIds(new Set());
+    } else {
+        setSelectedIds(new Set(filteredItems.map(item => item._id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+        newSelected.delete(id);
+    } else {
+        newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
   };
 
   if (isLoading) {
@@ -118,15 +172,52 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
   return (
     <div className="space-y-4 p-1">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Trash Store</h2>
-        <span className="text-sm text-muted-foreground">{items.length} items</span>
+        <div className="flex items-center gap-4">
+            <h2 className="text-lg font-semibold">Trash Store</h2>
+            <span className="text-sm text-muted-foreground">{items.length} items</span>
+        </div>
+        
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={selectedIds.size === 0 || isBulkDeleting}>
+                    {isBulkDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                    Delete Selected ({selectedIds.size})
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Delete {selectedIds.size} items permanently?</DialogTitle>
+                    <DialogDescription>
+                        This action cannot be undone. This will permanently remove the selected items.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button 
+                        variant="destructive"
+                        onClick={handleBulkDelete}
+                    >
+                        Delete Permanently
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
       </div>
       
       <div className="rounded-md border">
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className="w-[40px]">
+                        <Checkbox 
+                            checked={filteredItems.length > 0 && selectedIds.size === filteredItems.length}
+                            onCheckedChange={toggleSelectAll}
+                            aria-label="Select all"
+                        />
+                    </TableHead>
+                    <TableHead className="w-[40px]"></TableHead>
                     <TableHead className="w-[100px]">Type</TableHead>
                     <TableHead>Title / Label</TableHead>
                     <TableHead>Content Preview</TableHead>
@@ -137,7 +228,17 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
             <TableBody>
                 {filteredItems.map((item) => (
                     <Fragment key={item._id}>
-                    <TableRow className="group cursor-pointer hover:bg-muted/50" onClick={() => toggleRow(item._id)}>
+                    <TableRow 
+                        className={`group cursor-pointer hover:bg-muted/50 ${selectedIds.has(item._id) ? "bg-muted/30" : ""}`} 
+                        onClick={() => toggleRow(item._id)}
+                    >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Checkbox 
+                                checked={selectedIds.has(item._id)}
+                                onCheckedChange={() => toggleSelect(item._id)}
+                                aria-label={`Select ${item.content.title}`}
+                            />
+                        </TableCell>
                          <TableCell>
                             {expandedRows.has(item._id) ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                         </TableCell>
@@ -195,7 +296,7 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
                     </TableRow>
                     {expandedRows.has(item._id) && (
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={6} className="p-4">
+                            <TableCell colSpan={7} className="p-4">
                                 <div className="flex flex-col gap-2">
                                     <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Filtered Content Data</div>
                                     <div className={`bg-background border rounded-md p-4 font-mono text-xs whitespace-pre-wrap max-h-[300px] overflow-auto shadow-inner ${isPrivacyMode ? "blur-sm hover:blur-none transition-all duration-300" : ""}`}>

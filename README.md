@@ -11,6 +11,7 @@ Stop cluttering your chat apps with self-messages. Seamlessly share information 
 
 - **📝 Snippet Store:** Organize code and text snippets with tags, search, and privacy controls.
 - **📋 Clipboard Store:** Quick access to your temporary clipboard history.
+- **📝 Todo Store:** Manage tasks with priority & deadlines.
 - **🔗 Link Store:** Save, manage, and share important links.
 - **📦 Drop Store:** Text management for easy sharing.
 - **🌍 Public Store:** Share snippets with the world or restrict access to specific users.
