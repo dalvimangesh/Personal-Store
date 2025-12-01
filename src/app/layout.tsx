@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>",
   },
   verification: {
-    google: "xo2aNgUyHykzT3_9qzwwwh9n9v_oouF8TDWRtNm9yX4",
+    google: "0rvZm8Tvs1NiN4_8PFIjs66Ow4huuOqvsK3e_k2bSuM",
   },
 };
 
