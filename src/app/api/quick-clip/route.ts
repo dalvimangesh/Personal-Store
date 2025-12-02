@@ -15,17 +15,35 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Ensure userId is a string/ObjectId
     const userId = session.userId;
 
     let quickClip = await QuickClip.findOne({ userId });
     
     if (!quickClip) {
-        // Return empty content if not found, don't create yet to save space/writes
-        return NextResponse.json({ success: true, data: { content: "" } });
+        // Return default structure if not found
+        return NextResponse.json({ 
+            success: true, 
+            data: { 
+                clipboards: [{ name: "Main", content: "" }] 
+            } 
+        });
     }
 
-    return NextResponse.json({ success: true, data: { content: quickClip.content, updatedAt: quickClip.updatedAt } });
+    // Migration/Legacy handling
+    let clipboards = quickClip.clipboards;
+    if ((!clipboards || clipboards.length === 0) && quickClip.content) {
+        clipboards = [{ name: "Main", content: quickClip.content }];
+    } else if (!clipboards || clipboards.length === 0) {
+        clipboards = [{ name: "Main", content: "" }];
+    }
+
+    return NextResponse.json({ 
+        success: true, 
+        data: { 
+            clipboards: clipboards,
+            updatedAt: quickClip.updatedAt 
+        } 
+    });
   } catch (error) {
     console.error("Database Error:", error);
     return NextResponse.json({ success: false, error: "Database Connection Failed" }, { status: 500 });
@@ -45,16 +63,29 @@ export async function POST(request: Request) {
     const body = await request.json();
     const userId = session.userId;
     
+    // Expect clipboards array in body
+    const clipboards = body.clipboards;
+
+    if (!Array.isArray(clipboards)) {
+        return NextResponse.json({ success: false, error: "Invalid data format" }, { status: 400 });
+    }
+
+    // Update content field for legacy support (using first clipboard)
+    const mainContent = clipboards.length > 0 ? clipboards[0].content : "";
+
     const quickClip = await QuickClip.findOneAndUpdate(
         { userId },
-        { content: body.content },
+        { 
+            clipboards: clipboards,
+            content: mainContent 
+        },
         { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
     return NextResponse.json({ 
       success: true, 
       data: {
-        content: quickClip.content,
+        clipboards: quickClip.clipboards,
         updatedAt: quickClip.updatedAt
       } 
     });
@@ -62,4 +93,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: error }, { status: 400 });
   }
 }
-
