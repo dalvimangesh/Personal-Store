@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   publisher: "Mangesh Dalvi",
   icons: {
     icon: "/logo.svg",
-    shortcut: "/favicon.ico",
+    shortcut: "/logo.svg",
     apple: "/logo.svg",
   },
   openGraph: {
