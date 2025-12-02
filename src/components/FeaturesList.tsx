@@ -1,4 +1,4 @@
-import { Clipboard, Link2, Inbox, Globe, Sparkles, Eye, Trash2, StickyNote, ListTodo } from "lucide-react";
+import { Clipboard, Link2, Inbox, Globe, Sparkles, Eye, Trash2, StickyNote, ListTodo, Flame } from "lucide-react";
 
 export function FeaturesList() {
   return (
@@ -28,6 +28,10 @@ export function FeaturesList() {
         <span><strong>Public Store:</strong> Share with world or specific users.</span>
       </div>
       <div className="flex items-start gap-2">
+        <Flame className="h-3 w-3 mt-0.5 shrink-0" />
+        <span><strong>Secret Store:</strong> Generate self-destructing links for sensitive info.</span>
+      </div>
+      <div className="flex items-start gap-2">
         <Sparkles className="h-3 w-3 mt-0.5 shrink-0" />
         <span><strong>Smart Editor:</strong> AI-powered smart editing with Gemini.</span>
       </div>
@@ -42,4 +46,3 @@ export function FeaturesList() {
     </div>
   );
 }
-

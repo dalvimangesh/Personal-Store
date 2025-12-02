@@ -2,7 +2,7 @@
 
 Stop cluttering your chat apps with self-messages. Seamlessly share information between your mobile and PC without the mess.
 
-🔗 **Live Demo:** [https://personal-store-alpha.vercel.app](https://personal-store-alpha.vercel.app)
+🔗 **Live:** [https://personal-store-alpha.vercel.app](https://personal-store-alpha.vercel.app)
 
 <img width="2752" height="1536" alt="Gemini_Generated_Image_algrn9algrn9algr" src="https://github.com/user-attachments/assets/f36591d8-5105-49bf-9cdf-1ac5aa132633" />
 
@@ -15,6 +15,7 @@ Stop cluttering your chat apps with self-messages. Seamlessly share information 
 - **🔗 Link Store:** Save, manage, and share important links.
 - **📦 Drop Store:** Text management for easy sharing.
 - **🌍 Public Store:** Share snippets with the world or restrict access to specific users.
+- **🔥 Secret Store:** Generate self-destructing links for sensitive information (Burn After Reading).
 - **✨ Smart Editor:** AI-powered editing and generation using Google Gemini.
 - **👁️ Privacy Mode:** One-click privacy mode to blur sensitive content when screen sharing.
 - **🗑️ Trash Store:** Safety net for deleted items with restore capability.
