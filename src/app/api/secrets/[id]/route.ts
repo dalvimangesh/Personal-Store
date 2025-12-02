@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import Secret from "@/models/Secret";
+import { decrypt } from "@/lib/encryption";
 
 export async function GET(
   req: NextRequest,
@@ -29,7 +30,9 @@ export async function GET(
         if (!deletedSecret) {
              return NextResponse.json({ error: "Secret not found or already viewed" }, { status: 404 });
         }
-        return NextResponse.json({ content: deletedSecret.content, burned: true });
+        // Decrypt content before returning
+        const decryptedContent = decrypt(deletedSecret.content);
+        return NextResponse.json({ content: decryptedContent, burned: true });
     }
 
     // Handle Multiple Views
@@ -39,13 +42,17 @@ export async function GET(
          if (!deletedSecret) {
              return NextResponse.json({ error: "Secret not found or already viewed" }, { status: 404 });
         }
-        return NextResponse.json({ content: deletedSecret.content, burned: true });
+        // Decrypt content before returning
+        const decryptedContent = decrypt(deletedSecret.content);
+        return NextResponse.json({ content: decryptedContent, burned: true });
     } else {
         // Increment view count
         secret.viewCount += 1;
         await secret.save();
+        // Decrypt content before returning
+        const decryptedContent = decrypt(secret.content);
         return NextResponse.json({ 
-            content: secret.content, 
+            content: decryptedContent, 
             burned: false, 
             viewsLeft: secret.maxViews - secret.viewCount 
         });
@@ -56,4 +63,3 @@ export async function GET(
     return NextResponse.json({ error: "Failed to fetch secret" }, { status: 500 });
   }
 }
-

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import Secret, { ISecret } from "@/models/Secret";
+import { encrypt } from "@/lib/encryption";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
     }
 
     const secretData: Partial<ISecret> = {
-      content,
+      content: encrypt(content), // Encrypt content before saving
       maxViews: maxViews || 1,
     };
 
