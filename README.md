@@ -2,7 +2,7 @@
 
 Stop cluttering your chat apps with self-messages. Seamlessly share information between your mobile and PC without the mess.
 
-🔗 **Live Demo:** [https://personal-store-alpha.vercel.app](https://personal-store-alpha.vercel.app)
+🔗 **Live:** [https://personal-store-alpha.vercel.app](https://personal-store-alpha.vercel.app)
 
 <img width="2752" height="1536" alt="Gemini_Generated_Image_algrn9algrn9algr" src="https://github.com/user-attachments/assets/f36591d8-5105-49bf-9cdf-1ac5aa132633" />
 
