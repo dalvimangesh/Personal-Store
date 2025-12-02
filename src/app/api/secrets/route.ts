@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
-import Secret from "@/models/Secret";
+import Secret, { ISecret } from "@/models/Secret";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Content is required" }, { status: 400 });
     }
 
-    const secretData: any = {
+    const secretData: Partial<ISecret> = {
       content,
       maxViews: maxViews || 1,
     };
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
         secretData.expiresAt = expiresAt;
     }
 
-    const secret = await Secret.create(secretData);
+    const secret = await Secret.create(secretData) as ISecret;
 
     return NextResponse.json({ 
         success: true, 
@@ -35,4 +35,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to create secret" }, { status: 500 });
   }
 }
-
