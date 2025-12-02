@@ -5,16 +5,24 @@ import { verifySession } from '@/lib/auth';
 export async function middleware(request: NextRequest) {
   const cookie = request.cookies.get('session');
   const session = await verifySession(cookie?.value);
+  const path = request.nextUrl.pathname;
+
+  // Public Routes that don't require auth
+  const isPublicRoute = 
+    path.startsWith('/api/auth') || 
+    path.startsWith('/secret/') ||
+    (path.startsWith('/api/secrets/') && request.method === 'GET') ||
+    path.startsWith('/api/public/');
 
   // If trying to access login page while logged in, redirect to home
-  if (request.nextUrl.pathname.startsWith('/login') && session) {
+  if (path.startsWith('/login') && session) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
   // If trying to access protected routes while not logged in
-  if (!session && !request.nextUrl.pathname.startsWith('/login')) {
+  if (!session && !path.startsWith('/login') && !isPublicRoute) {
     // If it's an API route, return 401 JSON
-    if (request.nextUrl.pathname.startsWith('/api/')) {
+    if (path.startsWith('/api/')) {
        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     // Otherwise redirect to login
@@ -28,13 +36,12 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api/auth (auth routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - sw.js, workbox-*, swe-worker-* (service workers)
      * - *.svg (public images)
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|sw.js|workbox-|swe-worker-|.*\\.svg).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sw.js|workbox-|swe-worker-|.*\\.svg).*)',
   ],
 };

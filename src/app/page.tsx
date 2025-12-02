@@ -2,7 +2,7 @@
 
 import { useState, useMemo, createContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo } from "lucide-react";
+import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ import { TodoStore } from "@/components/TodoStore";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
 import { Inbox, Info } from "lucide-react";
 import { FeaturesList } from "@/components/FeaturesList";
+import { SecretCreator } from "@/components/SecretCreator";
 
 // Privacy Context
 const PrivacyContext = createContext<{
@@ -45,10 +46,10 @@ const PrivacyContext = createContext<{
   uniqueTags: string[];
   selectedTag: string | null;
   showHidden: boolean;
-  currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo';
+  currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store';
   onSelectTag: (tag: string | null) => void;
   onToggleHidden: (show: boolean) => void;
-  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo') => void;
+  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store') => void;
 }
 
 const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
@@ -97,6 +98,14 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelect
         >
             <Globe className="mr-2 h-4 w-4" />
             Public Store
+        </Button>
+        <Button
+            variant={currentView === 'secret-store' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('secret-store')}
+        >
+            <Flame className="mr-2 h-4 w-4" />
+            Secret Store
         </Button>
         <Button
             variant={currentView === 'trash' ? "secondary" : "ghost"}
@@ -174,7 +183,7 @@ export default function Home() {
     deleteSnippet: deleteSharedSnippet,
   } = useSharedSnippets();
 
-  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo'>('snippets');
+  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store'>('snippets');
   const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
   const [selectedSharedSnippet, setSelectedSharedSnippet] = useState<SharedSnippet | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -320,7 +329,7 @@ export default function Home() {
   };
 
   // Helper to switch views
-  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo') => {
+  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store') => {
       setCurrentView(view);
       // Reset search when switching views (optional, but often good UX)
       // setGenericSearchQuery(""); 
@@ -433,7 +442,7 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col md:flex-row items-center gap-3 md:gap-4 w-full">
-              {currentView !== 'quick-clip' && currentView !== 'about' && (
+              {currentView !== 'quick-clip' && currentView !== 'about' && currentView !== 'secret-store' && (
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -457,7 +466,7 @@ export default function Home() {
                 />
               </div>
               )}
-              <div className={`flex items-center gap-2 w-full md:w-auto justify-between ${(currentView === 'quick-clip' || currentView === 'about') ? 'md:justify-end md:ml-auto' : 'md:justify-start'}`}>
+              <div className={`flex items-center gap-2 w-full md:w-auto justify-between ${(currentView === 'quick-clip' || currentView === 'about' || currentView === 'secret-store') ? 'md:justify-end md:ml-auto' : 'md:justify-start'}`}>
                 <div className="flex items-center gap-2">
                   <Button 
                       variant={isPrivacyMode ? "destructive" : "outline"}
@@ -494,7 +503,7 @@ export default function Home() {
                     <Button onClick={() => openSharedEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
                         <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Public</span><span className="sm:hidden">Add</span>
                     </Button>
-                ) : currentView === 'todo' ? null : (
+                ) : (currentView === 'todo' || currentView === 'secret-store') ? null : (
                     <Button onClick={() => openEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
                         <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Snippet</span><span className="sm:hidden">Add</span>
                     </Button>
@@ -537,6 +546,10 @@ export default function Home() {
           ) : currentView === 'dropzone' ? (
              <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden">
                 <DropzoneManager searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
+             </div>
+          ) : currentView === 'secret-store' ? (
+             <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden overflow-y-auto">
+                <SecretCreator isPrivacyMode={isPrivacyMode} />
              </div>
           ) : currentView === 'trash' ? (
              <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden overflow-y-auto">
