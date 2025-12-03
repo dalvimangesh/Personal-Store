@@ -269,8 +269,8 @@ export async function POST(request: Request) {
         updatedAt: linkShare.updatedAt
       } 
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Save Error:", error);
-    return NextResponse.json({ success: false, error: error }, { status: 400 });
+    return NextResponse.json({ success: false, error: error.message || "Save failed" }, { status: 400 });
   }
 }
