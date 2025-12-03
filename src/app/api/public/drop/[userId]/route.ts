@@ -5,6 +5,7 @@ import User from '@/models/User';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
+import { encrypt } from '@/lib/encryption';
 
 export async function POST(
   request: Request,
@@ -70,7 +71,7 @@ export async function POST(
     }
 
     await Drop.create({
-      content: body.content,
+      content: encrypt(body.content),
       userId: recipientId,
       senderId: senderId,
     });

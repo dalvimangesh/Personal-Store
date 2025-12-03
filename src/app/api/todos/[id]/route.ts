@@ -4,6 +4,7 @@ import DeletedItem from '@/models/DeletedItem';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
+import { encrypt, decrypt } from '@/lib/encryption';
 
 export async function PUT(
   request: Request,
@@ -27,9 +28,13 @@ export async function PUT(
         return NextResponse.json({ success: false, error: "Priority must be between 0 and 9" }, { status: 400 });
     }
 
+    const updateData = { ...body };
+    if (updateData.title) updateData.title = encrypt(updateData.title);
+    if (updateData.description) updateData.description = encrypt(updateData.description);
+
     const todo = await Todo.findOneAndUpdate(
       { _id: id, userId },
-      { ...body },
+      updateData,
       { new: true }
     );
 
@@ -41,8 +46,8 @@ export async function PUT(
       success: true, 
       data: {
         id: todo._id.toString(),
-        title: todo.title,
-        description: todo.description,
+        title: decrypt(todo.title),
+        description: todo.description ? decrypt(todo.description) : undefined,
         priority: todo.priority,
         startDate: todo.startDate,
         deadline: todo.deadline,

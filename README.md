@@ -17,8 +17,9 @@ Stop cluttering your chat apps with self-messages. Seamlessly share information 
 - **🌍 Public Store:** Share snippets with the world or restrict access to specific users.
 - **🔥 Secret Store:** Generate self-destructing links for sensitive information (Burn After Reading).
 - **✨ Smart Editor:** AI-powered editing and generation using Google Gemini.
+- **🔒 Encrypted Storage:** All user data is encrypted at rest in the database for maximum privacy.
 - **👁️ Privacy Mode:** One-click privacy mode to blur sensitive content when screen sharing.
-- **🗑️ Trash Store:** Safety net for deleted items.
+- **🗑️ Trash Store:** Safety net for deleted items with restore capability.
 
 ## Tech Stack
 

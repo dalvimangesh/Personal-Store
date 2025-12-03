@@ -3,6 +3,7 @@ import Snippet from '@/models/Snippet';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
+import { encrypt, decrypt } from '@/lib/encryption';
 
 export async function GET() {
   try {
@@ -23,8 +24,8 @@ export async function GET() {
     // Transform _id to id for frontend consistency
     const formattedSnippets = snippets.map((doc: any) => ({
       id: doc._id.toString(),
-      title: doc.title,
-      content: doc.content,
+      title: decrypt(doc.title),
+      content: decrypt(doc.content),
       tags: doc.tags,
       isHidden: doc.isHidden || false,
       createdAt: doc.createdAt,
@@ -50,13 +51,21 @@ export async function POST(request: Request) {
     // userId is guaranteed to be a string now
     const userId = session.userId;
     
-    const snippet = await Snippet.create({ ...body, userId }) as any;
+    const snippetData = {
+      ...body,
+      userId,
+      title: encrypt(body.title),
+      content: encrypt(body.content)
+    };
+
+    const snippet = await Snippet.create(snippetData) as any;
+    
     return NextResponse.json({  
       success: true, 
       data: {
         id: snippet._id.toString(),
-        title: snippet.title,
-        content: snippet.content,
+        title: decrypt(snippet.title), // decrypting to show back to user immediately
+        content: decrypt(snippet.content),
         tags: snippet.tags,
         isHidden: snippet.isHidden,
         createdAt: snippet.createdAt

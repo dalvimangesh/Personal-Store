@@ -3,6 +3,7 @@ import SharedSnippet from '@/models/SharedSnippet';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
+import { encrypt, decrypt } from '@/lib/encryption';
 
 export async function GET() {
   try {
@@ -22,8 +23,8 @@ export async function GET() {
     
     const formattedSnippets = snippets.map((doc: any) => ({
       id: doc._id.toString(),
-      title: doc.title,
-      content: doc.content,
+      title: decrypt(doc.title),
+      content: decrypt(doc.content),
       tags: doc.tags,
       allowedUsers: doc.allowedUsers,
       createdAt: doc.createdAt,
@@ -48,13 +49,20 @@ export async function POST(request: Request) {
     const body = await request.json();
     const userId = session.userId;
     
-    const snippet = await SharedSnippet.create({ ...body, userId }) as any;
+    const snippetData = {
+      ...body,
+      userId,
+      title: encrypt(body.title),
+      content: encrypt(body.content)
+    };
+
+    const snippet = await SharedSnippet.create(snippetData) as any;
     return NextResponse.json({  
       success: true, 
       data: {
         id: snippet._id.toString(),
-        title: snippet.title,
-        content: snippet.content,
+        title: decrypt(snippet.title),
+        content: decrypt(snippet.content),
         tags: snippet.tags,
         allowedUsers: snippet.allowedUsers,
         createdAt: snippet.createdAt

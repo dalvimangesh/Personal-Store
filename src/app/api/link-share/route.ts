@@ -4,6 +4,7 @@ import DeletedItem from '@/models/DeletedItem';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
+import { encrypt, decrypt } from '@/lib/encryption';
 
 export async function GET() {
   try {
@@ -42,11 +43,25 @@ export async function GET() {
         // If completely empty, provide default
          categories = [{ name: "Default", items: [{ label: "", value: "" }] }];
     }
+    
+    // Decrypt everything
+    const decryptedCategories = categories.map((cat: any) => {
+        const catObj = cat.toObject ? cat.toObject() : cat;
+        return {
+            ...catObj,
+            name: decrypt(catObj.name),
+            items: (catObj.items || []).map((item: any) => ({
+                ...item,
+                label: decrypt(item.label),
+                value: decrypt(item.value)
+            }))
+        };
+    });
 
     return NextResponse.json({ 
         success: true, 
         data: { 
-            categories, 
+            categories: decryptedCategories, 
             updatedAt: linkShare.updatedAt 
         } 
     });
@@ -107,9 +122,9 @@ export async function POST(request: Request) {
                     originalId: item._id.toString(),
                     type: 'link',
                     content: { 
-                        title: item.label || "No Label", 
-                        content: item.value,
-                        ...item
+                        title: item.label || "No Label", // might be encrypted
+                        content: item.value, // might be encrypted
+                        ...item.toObject ? item.toObject() : item
                     }
                 }))
                 );
@@ -119,20 +134,45 @@ export async function POST(request: Request) {
     
     console.log("Saving categories for user", userId, body.categories.length);
 
+    // Encrypt incoming categories
+    const encryptedCategories = body.categories.map((cat: any) => ({
+        ...cat,
+        name: encrypt(cat.name),
+        items: (cat.items || []).map((item: any) => ({
+            ...item,
+            label: encrypt(item.label),
+            value: encrypt(item.value)
+        }))
+    }));
+
     // Expecting categories array
     const linkShare = await LinkShare.findOneAndUpdate(
         { userId },
         { 
-            categories: body.categories,
+            categories: encryptedCategories,
             items: [] // Clear legacy items after successful update
         },
         { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
+    // Decrypt for response (so frontend has correct data)
+    const responseCategories = linkShare.categories.map((cat: any) => {
+        const catObj = cat.toObject ? cat.toObject() : cat;
+        return {
+            ...catObj,
+            name: decrypt(catObj.name),
+            items: (catObj.items || []).map((item: any) => ({
+                ...item,
+                label: decrypt(item.label),
+                value: decrypt(item.value)
+            }))
+        };
+    });
+
     return NextResponse.json({ 
       success: true, 
       data: {
-        categories: linkShare.categories,
+        categories: responseCategories,
         updatedAt: linkShare.updatedAt
       } 
     });

@@ -3,6 +3,7 @@ import QuickClip from '@/models/QuickClip';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
+import { encrypt, decrypt } from '@/lib/encryption';
 
 export async function GET() {
   try {
@@ -32,9 +33,16 @@ export async function GET() {
     // Migration/Legacy handling
     let clipboards = quickClip.clipboards;
     if ((!clipboards || clipboards.length === 0) && quickClip.content) {
-        clipboards = [{ name: "Main", content: quickClip.content }];
+        clipboards = [{ name: "Main", content: decrypt(quickClip.content) }];
     } else if (!clipboards || clipboards.length === 0) {
         clipboards = [{ name: "Main", content: "" }];
+    } else {
+        // Decrypt clipboards
+        clipboards = clipboards.map((clip: any) => ({
+            ...clip.toObject ? clip.toObject() : clip,
+            name: decrypt(clip.name),
+            content: decrypt(clip.content)
+        }));
     }
 
     return NextResponse.json({ 
@@ -70,22 +78,36 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: "Invalid data format" }, { status: 400 });
     }
 
+    // Encrypt clipboards
+    const encryptedClipboards = clipboards.map((clip: any) => ({
+        name: encrypt(clip.name || "New Clipboard"),
+        content: encrypt(clip.content || "")
+    }));
+
     // Update content field for legacy support (using first clipboard)
-    const mainContent = clipboards.length > 0 ? clipboards[0].content : "";
+    // Encrypt mainContent as well
+    const mainContent = clipboards.length > 0 ? encrypt(clipboards[0].content || "") : encrypt("");
 
     const quickClip = await QuickClip.findOneAndUpdate(
         { userId },
         { 
-            clipboards: clipboards,
+            clipboards: encryptedClipboards,
             content: mainContent 
         },
         { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
+    // Decrypt for response
+    const decryptedClipboards = quickClip.clipboards.map((clip: any) => ({
+        ...clip.toObject ? clip.toObject() : clip,
+        name: decrypt(clip.name),
+        content: decrypt(clip.content)
+    }));
+
     return NextResponse.json({ 
       success: true, 
       data: {
-        clipboards: quickClip.clipboards,
+        clipboards: decryptedClipboards,
         updatedAt: quickClip.updatedAt
       } 
     });

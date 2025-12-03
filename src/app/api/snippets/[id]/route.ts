@@ -4,6 +4,7 @@ import DeletedItem from '@/models/DeletedItem';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
+import { encrypt, decrypt } from '@/lib/encryption';
 
 export async function PUT(
   request: Request,
@@ -21,9 +22,14 @@ export async function PUT(
     }
 
     const body = await request.json();
+    
+    const updateData = { ...body };
+    if (updateData.title) updateData.title = encrypt(updateData.title);
+    if (updateData.content) updateData.content = encrypt(updateData.content);
+
     const snippet = await Snippet.findOneAndUpdate(
       { _id: id, userId: session.userId },
-      body,
+      updateData,
       {
         new: true,
         runValidators: true,
@@ -40,14 +46,14 @@ export async function PUT(
       success: true, 
       data: {
         id: s._id.toString(),
-        title: s.title,
-        content: s.content,
+        title: decrypt(s.title),
+        content: decrypt(s.content),
         tags: s.tags,
         isHidden: s.isHidden,
         createdAt: s.createdAt
       } 
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ success: false }, { status: 400 });
   }
 }
@@ -88,7 +94,7 @@ export async function DELETE(
     await Snippet.deleteOne({ _id: id });
     
     return NextResponse.json({ success: true, data: {} });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ success: false }, { status: 400 });
   }
 }

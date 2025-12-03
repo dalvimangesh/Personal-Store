@@ -3,6 +3,7 @@ import Todo from '@/models/Todo';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
+import { encrypt, decrypt } from '@/lib/encryption';
 
 export async function GET() {
   try {
@@ -21,8 +22,8 @@ export async function GET() {
     
     const formattedTodos = todos.map((doc: any) => ({
       id: doc._id.toString(),
-      title: doc.title,
-      description: doc.description,
+      title: decrypt(doc.title),
+      description: doc.description ? decrypt(doc.description) : undefined,
       priority: doc.priority,
       startDate: doc.startDate,
       deadline: doc.deadline,
@@ -55,13 +56,18 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: "Priority must be between 0 and 9" }, { status: 400 });
     }
     
-    const todo = await Todo.create({ ...body, userId }) as any;
+    const todoData = { ...body, userId };
+    if (todoData.title) todoData.title = encrypt(todoData.title);
+    if (todoData.description) todoData.description = encrypt(todoData.description);
+
+    const todo = await Todo.create(todoData) as any;
+    
     return NextResponse.json({  
       success: true, 
       data: {
         id: todo._id.toString(),
-        title: todo.title,
-        description: todo.description,
+        title: decrypt(todo.title),
+        description: todo.description ? decrypt(todo.description) : undefined,
         priority: todo.priority,
         startDate: todo.startDate,
         deadline: todo.deadline,

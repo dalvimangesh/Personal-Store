@@ -4,6 +4,7 @@ import User from '@/models/User';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
+import { encrypt, decrypt } from '@/lib/encryption';
 
 export async function GET(
   request: Request,
@@ -33,8 +34,8 @@ export async function GET(
         success: true, 
         data: {
           id: snippet._id.toString(),
-          title: snippet.title,
-          content: snippet.content,
+          title: decrypt(snippet.title),
+          content: decrypt(snippet.content),
           tags: snippet.tags,
           allowedUsers: snippet.allowedUsers,
           createdAt: snippet.createdAt,
@@ -61,8 +62,8 @@ export async function GET(
         success: true, 
         data: {
           id: snippet._id.toString(),
-          title: snippet.title,
-          content: snippet.content,
+          title: decrypt(snippet.title),
+          content: decrypt(snippet.content),
           tags: snippet.tags,
           // allowedUsers not strictly needed for viewer, but maybe useful
           createdAt: snippet.createdAt,
@@ -100,8 +101,8 @@ export async function PUT(
             return NextResponse.json({ error: 'Snippet not found or unauthorized' }, { status: 404 });
         }
 
-        snippet.title = body.title || snippet.title;
-        snippet.content = body.content || snippet.content;
+        snippet.title = body.title ? encrypt(body.title) : snippet.title;
+        snippet.content = body.content ? encrypt(body.content) : snippet.content;
         snippet.tags = body.tags || snippet.tags;
         snippet.allowedUsers = body.allowedUsers || snippet.allowedUsers;
 
@@ -111,8 +112,8 @@ export async function PUT(
             success: true,
             data: {
                 id: snippet._id.toString(),
-                title: snippet.title,
-                content: snippet.content,
+                title: decrypt(snippet.title),
+                content: decrypt(snippet.content),
                 tags: snippet.tags,
                 allowedUsers: snippet.allowedUsers,
                 createdAt: snippet.createdAt

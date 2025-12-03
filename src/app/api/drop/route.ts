@@ -4,6 +4,7 @@ import User from '@/models/User'; // Import User model to ensure registration
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
+import { decrypt } from '@/lib/encryption';
 
 export async function GET() {
   await dbConnect(); // Ensure DB is connected first
@@ -34,7 +35,7 @@ export async function GET() {
     
     const formattedDrops = drops.map((doc: any) => ({
       id: doc._id.toString(),
-      content: doc.content,
+      content: decrypt(doc.content),
       createdAt: doc.createdAt,
       // Safety check for senderId being null (old records) or populated user being null (deleted user)
       sender: doc.senderId && doc.senderId.username ? doc.senderId.username : 'Anonymous', 

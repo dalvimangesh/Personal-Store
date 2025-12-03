@@ -13,20 +13,36 @@ export function encrypt(text: string): string {
 }
 
 export function decrypt(text: string): string {
-  const textParts = text.split(':');
-  const ivPart = textParts.shift();
+  if (!text) return text;
   
-  if (!ivPart) throw new Error("Invalid encrypted text format");
+  // Check if text matches encrypted format (hex:hex)
+  // Basic validation: contains a colon and parts are likely hex
+  if (!text.includes(':')) {
+    return text;
+  }
 
-  const iv = Buffer.from(ivPart, 'hex');
-  const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-  
-  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
-  const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-  
-  let decrypted = decipher.update(encryptedText);
-  decrypted = Buffer.concat([decrypted, decipher.final()]);
-  
-  return decrypted.toString();
+  try {
+    const textParts = text.split(':');
+    const ivPart = textParts.shift();
+    
+    if (!ivPart) return text;
+
+    const iv = Buffer.from(ivPart, 'hex');
+    const encryptedText = Buffer.from(textParts.join(':'), 'hex');
+    
+    const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    
+    let decrypted = decipher.update(encryptedText);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+    
+    return decrypted.toString();
+  } catch (error) {
+    // If decryption fails, assume it might be plain text or corrupted
+    // For migration purposes, returning original text is safer for data availability
+    // though strictly implies a security trade-off during transition.
+    console.warn('Decryption failed, returning original text:', error);
+    return text;
+  }
 }
 
