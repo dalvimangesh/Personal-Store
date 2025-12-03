@@ -1,8 +1,9 @@
 import dbConnect from '@/lib/db';
-import DeletedItem from '@/models/DeletedItem';
+import DeletedItem, { IDeletedItem } from '@/models/DeletedItem';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
+import { decrypt } from '@/lib/encryption';
 
 export async function GET() {
   await dbConnect();
@@ -16,7 +17,35 @@ export async function GET() {
 
     const items = await DeletedItem.find({ userId: session.userId }).sort({ createdAt: -1 });
     
-    return NextResponse.json({ success: true, data: items });
+    const decryptedItems = items.map((item: IDeletedItem) => {
+        const itemObj = item.toObject ? item.toObject() : item;
+        const content = itemObj.content || {};
+
+        // Decrypt based on type
+        if (itemObj.type === 'snippet') {
+            content.title = decrypt(content.title);
+            content.content = decrypt(content.content);
+        } else if (itemObj.type === 'todo') {
+            content.title = decrypt(content.title);
+            if (content.description) {
+                content.description = decrypt(content.description);
+            }
+        } else if (itemObj.type === 'link') {
+            // Link deletion logic maps label -> title, value -> content
+            content.title = decrypt(content.title);
+            content.content = decrypt(content.content);
+        } else if (itemObj.type === 'drop') {
+            content.content = decrypt(content.content);
+            // title is hardcoded "Drop Item" usually
+        }
+
+        return {
+            ...itemObj,
+            content
+        };
+    });
+
+    return NextResponse.json({ success: true, data: decryptedItems });
   } catch (error) {
     return NextResponse.json({ success: false, error: error }, { status: 400 });
   }
