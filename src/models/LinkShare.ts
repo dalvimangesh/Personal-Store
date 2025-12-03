@@ -44,11 +44,17 @@ const LinkShareSchema: Schema = new Schema(
 );
 
 // Handling Hot Reload in Next.js:
-// If the model exists but the schema is old (missing categories), delete it so it recompiles.
+// If the model exists but the schema is old (missing categories or sharedWith), delete it so it recompiles.
 if (mongoose.models.LinkShare) {
   const schema = mongoose.models.LinkShare.schema;
   if (!schema.paths['categories']) {
     delete mongoose.models.LinkShare;
+  } else {
+    // Check for sharedWith in subschema
+    const categoriesPath = schema.paths['categories'] as mongoose.Schema.Types.DocumentArray;
+    if (categoriesPath.schema && !categoriesPath.schema.paths['sharedWith']) {
+         delete mongoose.models.LinkShare;
+    }
   }
 }
 

@@ -15,7 +15,8 @@ export interface IQuickClip extends Document {
 
 const ClipboardSchema = new Schema({
   name: { type: String, default: "New Clipboard" },
-  content: { type: String, default: "" }
+  content: { type: String, default: "" },
+  sharedWith: [{ type: Schema.Types.ObjectId, ref: 'User' }]
 });
 
 const QuickClipSchema: Schema = new Schema(
@@ -37,6 +38,12 @@ if (mongoose.models.QuickClip) {
     const schema = mongoose.models.QuickClip.schema;
     if (!schema.paths['clipboards']) {
         delete mongoose.models.QuickClip;
+    } else {
+        // Check for sharedWith in subschema
+        const clipboardsPath = schema.paths['clipboards'] as mongoose.Schema.Types.DocumentArray;
+        if (clipboardsPath.schema && !clipboardsPath.schema.paths['sharedWith']) {
+             delete mongoose.models.QuickClip;
+        }
     }
 }
 
