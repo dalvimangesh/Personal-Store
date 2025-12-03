@@ -25,7 +25,8 @@ const LinkItemSchema = new Schema({
 
 const LinkCategorySchema = new Schema({
   name: { type: String, default: "Default" },
-  items: [LinkItemSchema]
+  items: [LinkItemSchema],
+  sharedWith: [{ type: Schema.Types.ObjectId, ref: 'User' }]
 });
 
 const LinkShareSchema: Schema = new Schema(

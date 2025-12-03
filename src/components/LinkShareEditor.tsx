@@ -2,7 +2,17 @@ import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, Trash2, Plus, GripVertical, Copy, ExternalLink, FolderPlus } from "lucide-react";
+import { Loader2, Trash2, Plus, GripVertical, Copy, ExternalLink, FolderPlus, Users, UserMinus, LogOut, Shield, UserPlus } from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 interface LinkItem {
   _id?: string;
@@ -10,10 +20,19 @@ interface LinkItem {
   value: string;
 }
 
+interface SharedUser {
+    userId: string;
+    username: string;
+}
+
 interface LinkCategory {
   _id?: string;
   name: string;
   items: LinkItem[];
+  isOwner?: boolean;
+  ownerId?: string;
+  ownerUsername?: string;
+  sharedWith?: SharedUser[];
 }
 
 const isValidUrl = (string: string) => {
@@ -31,7 +50,11 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
   const [isSaving, setIsSaving] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ... fetchItems ...
+  // Share Dialog State
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<LinkCategory | null>(null);
+  const [shareUsername, setShareUsername] = useState("");
+  const [isSharing, setIsSharing] = useState(false);
 
   const filteredCategories = categories.map(cat => {
     const matchesCategory = cat.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -40,9 +63,7 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
         item.value.toLowerCase().includes(searchQuery.toLowerCase())
     );
     
-    if (matchesCategory) return cat; // If category matches, show all items? Or just matching items? Let's show all for now or maybe just keep original items. 
-    // Actually, if category matches, we probably want to see the category, but maybe only matching items is better UX if the list is long.
-    // Let's go with: if category matches, show all. If items match, show category + matching items.
+    if (matchesCategory) return cat;
     
     if (matchingItems.length > 0) {
         return { ...cat, items: matchingItems };
@@ -56,15 +77,13 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
         const res = await fetch("/api/link-share");
         const data = await res.json();
         if (res.ok) {
-            // data.data.categories should be returned by the new API
             let fetchedCategories = data.data.categories || [];
             
-            // Fallback for safety if API returns weird data
             if (!fetchedCategories.length && data.data.items) {
-                 fetchedCategories = [{ name: "Default", items: data.data.items }];
+                 fetchedCategories = [{ name: "Default", items: data.data.items, isOwner: true }];
             }
             if (!fetchedCategories.length) {
-                fetchedCategories = [{ name: "Default", items: [{ label: "", value: "" }] }];
+                fetchedCategories = [{ name: "Default", items: [{ label: "", value: "" }], isOwner: true }];
             }
 
             setCategories(fetchedCategories);
@@ -85,13 +104,43 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
   const saveCategories = async (newCategories: LinkCategory[]) => {
     setIsSaving(true);
     try {
-      const res = await fetch("/api/link-share", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ categories: newCategories }),
-      });
-      
-      if (!res.ok) throw new Error("Failed to save");
+        // Split categories into owned and shared
+        const ownedCategories = newCategories.filter(c => c.isOwner !== false);
+        const sharedCategories = newCategories.filter(c => c.isOwner === false);
+
+        // 1. Save owned categories
+        const res = await fetch("/api/link-share", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ categories: ownedCategories }),
+        });
+        
+        if (!res.ok) throw new Error("Failed to save owned categories");
+
+        // 2. Update shared categories individually
+        // Note: This is inefficient if many shared categories change at once, 
+        // but typical usage is editing one at a time.
+        // We could optimize by checking if they actually changed.
+        await Promise.all(sharedCategories.map(async (cat) => {
+            // Only send necessary data
+            const updateData = {
+                categoryId: cat._id,
+                ownerId: cat.ownerId,
+                category: {
+                    name: cat.name,
+                    items: cat.items
+                }
+            };
+
+            const shareRes = await fetch("/api/link-share/category", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updateData),
+            });
+
+            if (!shareRes.ok) console.error(`Failed to update shared category ${cat.name}`);
+        }));
+
     } catch (error) {
       console.error("Error saving link share:", error);
       toast.error("Failed to save changes");
@@ -113,7 +162,7 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
   const handleAddCategory = () => {
     const newCategories = [
         ...categories, 
-        { name: "New Category", items: [{ label: "", value: "" }] }
+        { name: "New Category", items: [{ label: "", value: "" }], isOwner: true, sharedWith: [] }
     ];
     setCategories(newCategories);
     saveCategories(newCategories);
@@ -127,13 +176,18 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
   };
 
   const handleDeleteCategory = (index: number) => {
-      // Prevent deleting the last category if it's the only one, or just allow it and show empty state?
-      // User requirement: "if any link dont have catorgy then treat them as default category."
-      // If we delete all categories, we probably want to reset to a Default one.
-      
+      const catToDelete = categories[index];
+      if (catToDelete.isOwner === false) {
+          // Shared category - confirm leaving
+          if (confirm(`Are you sure you want to leave the shared category "${catToDelete.name}"?`)) {
+              handleLeaveCategory(catToDelete);
+          }
+          return;
+      }
+
       let newCategories = categories.filter((_, i) => i !== index);
       if (newCategories.length === 0) {
-          newCategories = [{ name: "Default", items: [{ label: "", value: "" }] }];
+          newCategories = [{ name: "Default", items: [{ label: "", value: "" }], isOwner: true }];
       }
       setCategories(newCategories);
       saveCategories(newCategories);
@@ -195,7 +249,6 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
     }
 
     let blocked = false;
-    // Reverse iteration sometimes helps with focus management, but standard is fine.
     validItems.forEach(item => {
         const w = window.open(item.value, '_blank');
         if (!w) blocked = true;
@@ -206,6 +259,109 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
             duration: 5000,
         });
     }
+  };
+
+  // Sharing Logic
+  const openShareDialog = (category: LinkCategory) => {
+      setSelectedCategory(category);
+      setShareUsername("");
+      setShareDialogOpen(true);
+  };
+
+  const handleAddUser = async () => {
+      if (!shareUsername || !selectedCategory) return;
+      setIsSharing(true);
+      try {
+          const res = await fetch("/api/link-share/share", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  categoryId: selectedCategory._id,
+                  action: 'add',
+                  username: shareUsername
+              })
+          });
+          const data = await res.json();
+          if (res.ok) {
+              toast.success("User added successfully");
+              setShareUsername("");
+              // Update local state
+              // We need to refetch to get the correct user ID/details or just rely on next refresh?
+              // Ideally update local state to show immediately. 
+              // But we don't have the user ID from just username without response data returning it.
+              // Let's just reload categories or wait. 
+              // Better: re-fetch categories to update UI.
+              const fetchRes = await fetch("/api/link-share");
+              if(fetchRes.ok) {
+                   const d = await fetchRes.json();
+                   setCategories(d.data.categories);
+                   // Update selected category ref
+                   const updatedCat = d.data.categories.find((c: any) => c._id === selectedCategory._id);
+                   if (updatedCat) setSelectedCategory(updatedCat);
+              }
+          } else {
+              toast.error(data.error || "Failed to add user");
+          }
+      } catch (error) {
+          toast.error("Error adding user");
+      } finally {
+          setIsSharing(false);
+      }
+  };
+
+  const handleRemoveUser = async (username: string) => {
+      if (!selectedCategory) return;
+      setIsSharing(true);
+      try {
+          const res = await fetch("/api/link-share/share", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  categoryId: selectedCategory._id,
+                  action: 'remove',
+                  username: username
+              })
+          });
+          if (res.ok) {
+              toast.success("User removed");
+               // Update local state
+               const newSharedWith = (selectedCategory.sharedWith || []).filter(u => u.username !== username);
+               const newCategory = { ...selectedCategory, sharedWith: newSharedWith };
+               
+               // Update in categories list
+               setCategories(categories.map(c => c._id === selectedCategory._id ? newCategory : c));
+               setSelectedCategory(newCategory);
+          } else {
+              toast.error("Failed to remove user");
+          }
+      } catch (error) {
+          toast.error("Error removing user");
+      } finally {
+          setIsSharing(false);
+      }
+  };
+
+  const handleLeaveCategory = async (category: LinkCategory) => {
+      try {
+          const res = await fetch("/api/link-share/share", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  categoryId: category._id,
+                  ownerId: category.ownerId,
+                  action: 'leave'
+              })
+          });
+          if (res.ok) {
+              toast.success("Left category");
+              setCategories(categories.filter(c => c !== category));
+              setShareDialogOpen(false);
+          } else {
+              toast.error("Failed to leave category");
+          }
+      } catch (error) {
+          toast.error("Error leaving category");
+      }
   };
 
   if (isLoading) {
@@ -233,9 +389,10 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
 
         <div className="flex flex-col gap-8">
             {filteredCategories.map((category, catIndex) => {
-                // We need to map back to the original index for editing
-                const originalIndex = categories.findIndex(c => c._id === category._id || c === category); // Fallback to object reference if no ID
-                
+                const originalIndex = categories.findIndex(c => c === category);
+                const isOwner = category.isOwner !== false;
+                const isShared = !isOwner;
+
                 return (
                 <div key={category._id || catIndex} className="flex flex-col gap-2">
                     <div className="flex items-center gap-2 mb-2 group/cat">
@@ -245,7 +402,15 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
                             className={`font-semibold text-lg h-auto py-1 px-2 border-transparent hover:border-input focus:border-input bg-transparent w-auto min-w-[150px] ${isPrivacyMode ? "blur-sm group-hover/cat:blur-none transition-all duration-300" : ""}`}
                             placeholder="Category Name"
                         />
-                         <Button 
+                        
+                        {isShared && (
+                             <Badge variant="secondary" className="text-xs gap-1">
+                                <Shield className="h-3 w-3" />
+                                Shared by {category.ownerUsername}
+                             </Badge>
+                        )}
+
+                        <Button 
                             variant="ghost" 
                             size="icon" 
                             className="h-8 w-8 text-muted-foreground hover:text-foreground opacity-0 group-hover/cat:opacity-100 transition-opacity" 
@@ -254,22 +419,35 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
                         >
                             <ExternalLink className="h-4 w-4" />
                         </Button>
+
+                        {/* Share Button */}
+                        {isOwner && (
+                             <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-muted-foreground hover:text-blue-500 opacity-0 group-hover/cat:opacity-100 transition-opacity" 
+                                onClick={() => openShareDialog(category)}
+                                title="Share Category"
+                            >
+                                <Users className="h-4 w-4" />
+                            </Button>
+                        )}
+
                          <Button 
                             variant="ghost" 
                             size="icon" 
                             className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover/cat:opacity-100 transition-opacity" 
                             onClick={() => handleDeleteCategory(originalIndex)} 
-                            title="Delete Category"
+                            title={isOwner ? "Delete Category" : "Leave Category"}
                         >
-                            <Trash2 className="h-4 w-4" />
+                            {isOwner ? <Trash2 className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
                         </Button>
                     </div>
 
-                    <div className="flex flex-col gap-2 pl-4 border-l-2 border-muted">
+                    <div className={`flex flex-col gap-2 pl-4 border-l-2 ${isShared ? 'border-blue-500/30' : 'border-muted'}`}>
                         {category.items.map((item, filteredItemIndex) => {
-                            // Map back to original item index
                             const originalCategory = categories[originalIndex];
-                            const originalItemIndex = originalCategory.items.findIndex(i => i === item); // Using object reference
+                            const originalItemIndex = originalCategory.items.findIndex(i => i === item);
 
                             const isUrl = isValidUrl(item.value);
                             return (
@@ -329,6 +507,65 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
                 <FolderPlus className="h-4 w-4 mr-2" /> Add Category
             </Button>
         </div>
+
+        {/* Share Dialog */}
+        <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Share "{selectedCategory?.name}"</DialogTitle>
+                    <DialogDescription>
+                        Invite others to view and edit this category.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="flex flex-col gap-4 py-4">
+                    <div className="flex items-end gap-2">
+                        <div className="grid gap-1 w-full">
+                            <Label htmlFor="username">Add by username</Label>
+                            <Input
+                                id="username"
+                                placeholder="username"
+                                value={shareUsername}
+                                onChange={(e) => setShareUsername(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddUser()}
+                            />
+                        </div>
+                        <Button onClick={handleAddUser} disabled={isSharing || !shareUsername}>
+                            {isSharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                        </Button>
+                    </div>
+
+                    <div className="flex flex-col gap-2 mt-2">
+                        <Label>Shared with</Label>
+                        {selectedCategory?.sharedWith && selectedCategory.sharedWith.length > 0 ? (
+                            <div className="flex flex-col gap-2">
+                                {selectedCategory.sharedWith.map((user) => (
+                                    <div key={user.userId} className="flex items-center justify-between p-2 border rounded-md bg-muted/50">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
+                                                {user.username[0].toUpperCase()}
+                                            </div>
+                                            <span className="text-sm font-medium">{user.username}</span>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                            onClick={() => handleRemoveUser(user.username)}
+                                            disabled={isSharing}
+                                        >
+                                            <UserMinus className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground italic">Not shared with anyone yet.</p>
+                        )}
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
