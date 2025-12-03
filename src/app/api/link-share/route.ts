@@ -1,10 +1,12 @@
 import dbConnect from '@/lib/db';
 import LinkShare from '@/models/LinkShare';
 import DeletedItem from '@/models/DeletedItem';
+import User from '@/models/User';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
 import { encrypt, decrypt } from '@/lib/encryption';
+import mongoose from 'mongoose';
 
 export async function GET() {
   try {
@@ -19,50 +21,107 @@ export async function GET() {
 
     const userId = session.userId;
 
-    let linkShare = await LinkShare.findOne({ userId });
+    // 1. Fetch my own LinkShare
+    let myLinkShare = await LinkShare.findOne({ userId });
     
-    if (!linkShare) {
-        // Default state for new users
-        return NextResponse.json({ 
-            success: true, 
-            data: { 
-                categories: [{ name: "Default", items: [{ label: "", value: "" }] }] 
-            } 
+    // 2. Fetch LinkShares where I am in sharedWith
+    const sharedLinkShares = await LinkShare.find({ 
+        "categories.sharedWith": userId 
+    }).populate('userId', 'username'); // Populate owner info
+
+    let allCategories = [];
+
+    // Process my own categories
+    if (myLinkShare) {
+        let myCats = myLinkShare.categories || [];
+        
+        // Migration: If no categories but we have legacy items
+        if (myCats.length === 0 && myLinkShare.items && myLinkShare.items.length > 0) {
+            myCats = [{
+                name: "Default",
+                items: myLinkShare.items,
+                sharedWith: []
+            }];
+        }
+
+        // Decrypt and format my categories
+        const myDecryptedCats = await Promise.all(myCats.map(async (cat: any) => {
+            const catObj = cat.toObject ? cat.toObject() : cat;
+            
+            // Fetch sharedWith user details
+            let sharedWithUsers: any[] = [];
+            if (catObj.sharedWith && catObj.sharedWith.length > 0) {
+                sharedWithUsers = await User.find({ _id: { $in: catObj.sharedWith } }).select('username _id');
+            }
+
+            return {
+                ...catObj,
+                name: decrypt(catObj.name),
+                items: (catObj.items || []).map((item: any) => ({
+                    ...item,
+                    label: decrypt(item.label),
+                    value: decrypt(item.value)
+                })),
+                isOwner: true,
+                ownerId: userId,
+                sharedWith: sharedWithUsers.map(u => ({ userId: u._id, username: u.username }))
+            };
+        }));
+        
+        allCategories.push(...myDecryptedCats);
+    } else {
+        // Default for new user
+        allCategories.push({ 
+            name: "Default", 
+            items: [{ label: "", value: "" }],
+            isOwner: true,
+            ownerId: userId,
+            sharedWith: []
         });
     }
 
-    let categories = linkShare.categories || [];
-    
-    // Migration: If no categories but we have legacy items
-    if (categories.length === 0 && linkShare.items && linkShare.items.length > 0) {
-        categories = [{
-            name: "Default",
-            items: linkShare.items
-        }];
-    } else if (categories.length === 0) {
-        // If completely empty, provide default
-         categories = [{ name: "Default", items: [{ label: "", value: "" }] }];
+    // Process shared categories
+    for (const doc of sharedLinkShares) {
+        const docOwner = doc.userId; // Populated user object or ID
+        const ownerId = docOwner._id || docOwner;
+        const ownerUsername = docOwner.username || "Unknown";
+
+        const sharedCats = doc.categories.filter((cat: any) => 
+            cat.sharedWith && cat.sharedWith.map((id: any) => id.toString()).includes(userId)
+        );
+
+        const decryptedSharedCats = await Promise.all(sharedCats.map(async (cat: any) => {
+            const catObj = cat.toObject ? cat.toObject() : cat;
+            
+             // Fetch sharedWith user details for shared cats too (so I can see who else is there)
+            let sharedWithUsers: any[] = [];
+            if (catObj.sharedWith && catObj.sharedWith.length > 0) {
+                sharedWithUsers = await User.find({ _id: { $in: catObj.sharedWith } }).select('username _id');
+            }
+
+            return {
+                ...catObj,
+                name: decrypt(catObj.name),
+                items: (catObj.items || []).map((item: any) => ({
+                    ...item,
+                    label: decrypt(item.label),
+                    value: decrypt(item.value)
+                })),
+                isOwner: false,
+                ownerId: ownerId,
+                ownerUsername: ownerUsername,
+                sharedWith: sharedWithUsers.map(u => ({ userId: u._id, username: u.username }))
+            };
+        }));
+
+        allCategories.push(...decryptedSharedCats);
     }
-    
-    // Decrypt everything
-    const decryptedCategories = categories.map((cat: any) => {
-        const catObj = cat.toObject ? cat.toObject() : cat;
-        return {
-            ...catObj,
-            name: decrypt(catObj.name),
-            items: (catObj.items || []).map((item: any) => ({
-                ...item,
-                label: decrypt(item.label),
-                value: decrypt(item.value)
-            }))
-        };
-    });
 
     return NextResponse.json({ 
         success: true, 
         data: { 
-            categories: decryptedCategories, 
-            updatedAt: linkShare.updatedAt 
+            categories: allCategories, 
+            updatedAt: myLinkShare?.updatedAt || new Date()
         } 
     });
   } catch (error) {
@@ -88,7 +147,19 @@ export async function POST(request: Request) {
          return NextResponse.json({ success: false, error: "Invalid data: categories missing" }, { status: 400 });
     }
 
-    // Detect deleted items
+    // Filter only owned categories
+    const ownedCategories = body.categories.filter((cat: any) => {
+        // If it has no ownerId, assume it's new and owned by me.
+        // If it has ownerId, it must match userId.
+        // Or use the isOwner flag if trusted (backend check is better).
+        // We can check if ownerId is present and !== userId.
+        if (cat.ownerId && cat.ownerId !== userId) return false;
+        // Also exclude if isOwner is explicitly false
+        if (cat.isOwner === false) return false;
+        return true;
+    });
+
+    // Detect deleted items (only for owned categories)
     const currentLinkShare = await LinkShare.findOne({ userId });
     
     if (currentLinkShare) {
@@ -103,7 +174,7 @@ export async function POST(request: Request) {
 
         if (currentItems.length > 0) {
              // Flatten new items
-            const newItems = body.categories.flatMap((c: any) => c.items);
+            const newItems = ownedCategories.flatMap((c: any) => c.items);
             
             const newItemsIds = new Set(
                 newItems
@@ -122,8 +193,8 @@ export async function POST(request: Request) {
                     originalId: item._id.toString(),
                     type: 'link',
                     content: { 
-                        title: item.label || "No Label", // might be encrypted
-                        content: item.value, // might be encrypted
+                        title: item.label || "No Label", 
+                        content: item.value,
                         ...item.toObject ? item.toObject() : item
                     }
                 }))
@@ -132,17 +203,24 @@ export async function POST(request: Request) {
         }
     }
     
-    console.log("Saving categories for user", userId, body.categories.length);
+    console.log("Saving categories for user", userId, ownedCategories.length);
 
     // Encrypt incoming categories
-    const encryptedCategories = body.categories.map((cat: any) => ({
+    // Preserve sharedWith if it exists in incoming data (though we generally shouldn't modify it here via bulk update if strict, 
+    // but for owned categories, we might want to preserve it).
+    // Ideally, sharing is done via specific endpoints.
+    // But if we send the array back, we should keep the IDs.
+    
+    const encryptedCategories = ownedCategories.map((cat: any) => ({
         ...cat,
         name: encrypt(cat.name),
         items: (cat.items || []).map((item: any) => ({
             ...item,
             label: encrypt(item.label),
             value: encrypt(item.value)
-        }))
+        })),
+        // Ensure sharedWith is just IDs for DB
+        sharedWith: cat.sharedWith ? cat.sharedWith.map((u: any) => u.userId || u) : []
     }));
 
     // Expecting categories array
@@ -155,7 +233,18 @@ export async function POST(request: Request) {
         { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    // Decrypt for response (so frontend has correct data)
+    // Re-fetch to get populated/formatted return if needed, or just return what we saved (but decrypted).
+    // For simplicity and consistency, let's return the decrypted structure of what we just saved.
+    // Note: We are NOT returning the shared categories here. The frontend should probably merge them or re-fetch.
+    // Or we can just return success and let frontend re-fetch. 
+    // The current frontend uses the response to update state. 
+    // If we return only owned categories, the shared ones might disappear from UI until refresh.
+    // So we should probably return the full set like GET does, OR just return the owned ones and frontend merges.
+    // Let's return owned ones + shared ones (by fetching them).
+    
+    // Re-use GET logic logic partially? Too complex for one function. 
+    // Let's just return the owned ones we saved. Frontend can keep shared ones in state.
+    
     const responseCategories = linkShare.categories.map((cat: any) => {
         const catObj = cat.toObject ? cat.toObject() : cat;
         return {
@@ -165,7 +254,11 @@ export async function POST(request: Request) {
                 ...item,
                 label: decrypt(item.label),
                 value: decrypt(item.value)
-            }))
+            })),
+            isOwner: true,
+            ownerId: userId,
+            // sharedWith might need population again if we want to show names immediately
+             sharedWith: (catObj.sharedWith || []).map((id: any) => ({ userId: id })) // Partial info
         };
     });
 

@@ -19,7 +19,7 @@ Stop cluttering your chat apps with self-messages. Seamlessly share information 
 - **✨ Smart Editor:** AI-powered editing and generation using Google Gemini.
 - **🔒 Encrypted Storage:** All user data is encrypted at rest in the database for maximum privacy.
 - **👁️ Privacy Mode:** One-click privacy mode to blur sensitive content when screen sharing.
-- **🗑️ Trash Store:** Safety net for deleted items.
+- **🗑️ Trash Store:** Safety net for deleted items with restore capability.
 
 ## Tech Stack
 
