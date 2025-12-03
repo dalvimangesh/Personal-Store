@@ -1,5 +1,5 @@
 import dbConnect from '@/lib/db';
-import LinkShare from '@/models/LinkShare';
+import QuickClip from '@/models/QuickClip';
 import User from '@/models/User';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
@@ -16,22 +16,21 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { categoryId, action, username, ownerId } = body;
+    const { clipboardId, action, username, ownerId } = body;
     const userId = session.userId;
 
-    if (!categoryId || !action) {
+    if (!clipboardId || !action) {
         return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
     }
 
     if (action === 'add') {
-        // Add a user to my category
         if (!username) return NextResponse.json({ success: false, error: "Username required" }, { status: 400 });
 
-        const linkShare = await LinkShare.findOne({ userId });
-        if (!linkShare) return NextResponse.json({ success: false, error: "LinkShare not found" }, { status: 404 });
+        const quickClip = await QuickClip.findOne({ userId });
+        if (!quickClip) return NextResponse.json({ success: false, error: "QuickClip not found" }, { status: 404 });
 
-        const category = linkShare.categories.id(categoryId);
-        if (!category) return NextResponse.json({ success: false, error: "Category not found" }, { status: 404 });
+        const clipboard = quickClip.clipboards.id(clipboardId);
+        if (!clipboard) return NextResponse.json({ success: false, error: "Clipboard not found" }, { status: 404 });
 
         const targetUser = await User.findOne({ username });
         if (!targetUser) return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
@@ -40,50 +39,48 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: "Cannot share with yourself" }, { status: 400 });
         }
 
-        if (!category.sharedWith) {
-            category.sharedWith = [];
+        if (!clipboard.sharedWith) {
+            clipboard.sharedWith = [];
         }
 
-        const alreadyShared = category.sharedWith.some((id: any) => id.toString() === targetUser._id.toString());
+        const alreadyShared = clipboard.sharedWith.some((id: any) => id.toString() === targetUser._id.toString());
         if (!alreadyShared) {
-            category.sharedWith.push(targetUser._id);
-            await linkShare.save();
+            clipboard.sharedWith.push(targetUser._id);
+            await quickClip.save();
         }
 
         return NextResponse.json({ success: true, data: { message: "User added" } });
 
     } else if (action === 'remove') {
-        // Remove a user from my category
         if (!username) return NextResponse.json({ success: false, error: "Username required" }, { status: 400 });
 
-        const linkShare = await LinkShare.findOne({ userId });
-        if (!linkShare) return NextResponse.json({ success: false, error: "LinkShare not found" }, { status: 404 });
+        const quickClip = await QuickClip.findOne({ userId });
+        if (!quickClip) return NextResponse.json({ success: false, error: "QuickClip not found" }, { status: 404 });
 
-        const category = linkShare.categories.id(categoryId);
-        if (!category) return NextResponse.json({ success: false, error: "Category not found" }, { status: 404 });
+        const clipboard = quickClip.clipboards.id(clipboardId);
+        if (!clipboard) return NextResponse.json({ success: false, error: "Clipboard not found" }, { status: 404 });
 
         const targetUser = await User.findOne({ username });
         if (!targetUser) return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
 
-        category.sharedWith = category.sharedWith.filter((id: any) => id.toString() !== targetUser._id.toString());
-        await linkShare.save();
+        clipboard.sharedWith = clipboard.sharedWith.filter((id: any) => id.toString() !== targetUser._id.toString());
+        await quickClip.save();
 
         return NextResponse.json({ success: true, data: { message: "User removed" } });
 
     } else if (action === 'leave') {
-        // Leave a shared category
         if (!ownerId) return NextResponse.json({ success: false, error: "Owner ID required" }, { status: 400 });
 
-        const linkShare = await LinkShare.findOne({ userId: ownerId });
-        if (!linkShare) return NextResponse.json({ success: false, error: "Owner LinkShare not found" }, { status: 404 });
+        const quickClip = await QuickClip.findOne({ userId: ownerId });
+        if (!quickClip) return NextResponse.json({ success: false, error: "Owner QuickClip not found" }, { status: 404 });
 
-        const category = linkShare.categories.id(categoryId);
-        if (!category) return NextResponse.json({ success: false, error: "Category not found" }, { status: 404 });
+        const clipboard = quickClip.clipboards.id(clipboardId);
+        if (!clipboard) return NextResponse.json({ success: false, error: "Clipboard not found" }, { status: 404 });
 
-        category.sharedWith = category.sharedWith.filter((id: any) => id.toString() !== userId);
-        await linkShare.save();
+        clipboard.sharedWith = clipboard.sharedWith.filter((id: any) => id.toString() !== userId);
+        await quickClip.save();
 
-        return NextResponse.json({ success: true, data: { message: "Left category" } });
+        return NextResponse.json({ success: true, data: { message: "Left clipboard" } });
     }
 
     return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 });

@@ -178,10 +178,8 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
   const handleDeleteCategory = (index: number) => {
       const catToDelete = categories[index];
       if (catToDelete.isOwner === false) {
-          // Shared category - confirm leaving
-          if (confirm(`Are you sure you want to leave the shared category "${catToDelete.name}"?`)) {
-              handleLeaveCategory(catToDelete);
-          }
+          // Shared category - leave directly
+          handleLeaveCategory(catToDelete);
           return;
       }
 
@@ -291,7 +289,7 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
               // But we don't have the user ID from just username without response data returning it.
               // Let's just reload categories or wait. 
               // Better: re-fetch categories to update UI.
-              const fetchRes = await fetch("/api/link-share");
+              const fetchRes = await fetch("/api/link-share?t=" + Date.now());
               if(fetchRes.ok) {
                    const d = await fetchRes.json();
                    setCategories(d.data.categories);
