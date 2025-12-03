@@ -1,0 +1,95 @@
+# Personal Store - Design Document
+
+## 1. Problem Statement
+The user needs a centralized, personal space to store important text snippets (messages, cover letters, links) that can be easily accessed and copied from any device (PC, Mobile). 
+
+**Current Friction:**
+- Relying on history in AI tools (Gemini/ChatGPT) to find past generations.
+- using chat apps (Slack/WhatsApp) to transfer text between PC and Mobile.
+- Repetitive searching for static content.
+
+## 2. Solution Overview
+A web-based "Personal Store" application (PWA capable) that acts as a synchronized clipboard and snippet manager.
+
+### Core Value Proposition
+"Write once, accessible everywhere."
+
+## 3. Use Cases
+
+### Personal Use Cases
+1.  **The "Cover Letter" Scenario**: Store polished versions of cover letters/bios. Open app -> Search "Cover Letter" -> Copy -> Paste into job application.
+2.  **The "PC to Mobile" Bridge**: 
+    -   *Scenario*: User finds a tweet/link on PC, wants to share on WhatsApp (Mobile).
+    -   *Action*: Paste to Personal Store on PC -> Open App on Mobile -> Copy -> Paste in WhatsApp.
+3.  **Recurring Messages**: Storing template replies for emails or DMs.
+4.  **Quick Reference**: Storing frequent data (Address, WiFi, ID numbers) that isn't sensitive enough for a vault but needs quick access (though we should consider encryption for sensitive data later).
+5.  **Drafting Area**: A place to draft a quick thought before moving it elsewhere.
+
+### "Store as a Service" (SaaS) Potential
+1.  **Multi-tenancy**: Allow other users to sign up and have their own isolated stores.
+2.  **API Access**: Allow developers to fetch their snippets programmatically (e.g., CLI tool to fetch API keys or config snippets).
+3.  **Shared Snippets**: Allow users to create "Public Links" for specific snippets to share with others (Read-only).
+
+## 4. Functional Requirements
+
+1.  **Dashboard**: List of all snippets.
+2.  **Search**: Instant search by title, content, or tags.
+3.  **Create/Edit**: Rich text or Plain text editor for snippets.
+4.  **Copy Action**: One-click copy to clipboard.
+5.  **Categorization**: Tags or Folders (e.g., "Work", "Personal", "Drafts").
+6.  **Responsive Design**: Mobile-first UI for easy access on phones.
+
+## 5. Technical Architecture
+
+### Tech Stack
+-   **Frontend**: **Next.js** (React).
+    -   *Why*: Excellent performance, easy API integration, good PWA support, industry standard.
+-   **Styling**: **Tailwind CSS** + **shadcn/ui**.
+    -   *Why*: Rapid UI development, clean aesthetic, mobile-responsive primitives.
+-   **Backend / Database**: **Supabase** (PostgreSQL).
+    -   *Why*: Built-in Auth, easy Database, Realtime subscriptions (instant sync between devices), and exposes an API automatically if needed.
+    -   *Alternative*: SQLite (Turso) + NextAuth. Given the "Service" ambition, Supabase is a strong start.
+-   **Authentication**: **Clerk** or **Supabase Auth**.
+    -   *Why*: Secure, handles session management across devices easily.
+
+### Data Model
+
+**User**
+-   id (UUID)
+-   email
+-   created_at
+
+**Snippet**
+-   id (UUID)
+-   user_id (FK -> User.id)
+-   title (String)
+-   content (Text)
+-   tags (Array<String>)
+-   is_favorite (Boolean)
+-   created_at (Timestamp)
+-   updated_at (Timestamp)
+
+## 6. UX/UI Concept
+
+-   **Mobile View**: Bottom navigation (Home, Search, Add). List items have a prominent "Copy" button.
+-   **Desktop View**: Sidebar navigation. Grid or List view of snippets.
+-   **Quick Add**: A floating action button (FAB) on mobile to quickly paste content from the clipboard.
+
+## 7. Roadmap
+
+1.  **Phase 1: MVP (Personal)**
+    -   Setup Next.js project.
+    -   Local storage or simple DB implementation.
+    -   Basic CRUD (Create, Read, Update, Delete).
+    -   Copy functionality.
+    -   Mobile responsive layout.
+
+2.  **Phase 2: Cloud Sync & Auth**
+    -   Integrate Supabase/Clerk.
+    -   Secure user data.
+
+3.  **Phase 3: Polish & SaaS features**
+    -   Public sharing.
+    -   API keys.
+    -   Dark mode/Themes.
+

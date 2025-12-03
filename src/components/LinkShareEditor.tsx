@@ -57,10 +57,13 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
   const [isSharing, setIsSharing] = useState(false);
 
   const filteredCategories = categories.map(cat => {
-    const matchesCategory = cat.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchingItems = cat.items.filter(item => 
-        item.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        item.value.toLowerCase().includes(searchQuery.toLowerCase())
+    // Guard clause for missing or malformed categories
+    if (!cat || !cat.items) return null;
+
+    const matchesCategory = (cat.name || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchingItems = (cat.items || []).filter(item => 
+        (item.label || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (item.value || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
     
     if (matchesCategory) return cat;
@@ -444,8 +447,24 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
 
                     <div className={`flex flex-col gap-2 pl-4 border-l-2 ${isShared ? 'border-blue-500/30' : 'border-muted'}`}>
                         {category.items.map((item, filteredItemIndex) => {
-                            const originalCategory = categories[originalIndex];
-                            const originalItemIndex = originalCategory.items.findIndex(i => i === item);
+                            // Map back to original item index
+                            // Safety check: category might be a filtered object, but we need to find it in the main 'categories' state
+                            const originalCategoryIndex = categories.findIndex(c => c._id === category._id || c === category);
+                            
+                            // If category not found (shouldn't happen often but safety first), use the current category object
+                            const originalCategory = originalCategoryIndex !== -1 ? categories[originalCategoryIndex] : category;
+                            
+                            // Find item index safely
+                            const originalItemIndex = originalCategory.items ? originalCategory.items.findIndex(i => i === item) : -1;
+
+    // Fallback if not found (e.g. new item not yet saved/synced with ID)
+    // This prevents the crash if originalCategory.items is somehow undefined or item isn't found
+    if (!originalCategory || !originalCategory.items || originalItemIndex === -1) {
+        // If we can't find the original index, we can't edit it reliably. 
+        // Rendering it read-only or just returning null might be safer, but let's try to render
+        // and rely on filteredItemIndex if absolutely necessary, though editing might be glitchy.
+        // Better to just return what we have for display.
+    }
 
                             const isUrl = isValidUrl(item.value);
                             return (
@@ -455,7 +474,11 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
                                     <Input
                                         placeholder="Label"
                                         value={item.label}
-                                        onChange={(e) => handleItemChange(originalIndex, originalItemIndex, 'label', e.target.value)}
+                                        onChange={(e) => {
+                                            if (originalCategoryIndex !== -1 && originalItemIndex !== -1) {
+                                                handleItemChange(originalCategoryIndex, originalItemIndex, 'label', e.target.value)
+                                            }
+                                        }}
                                         className={`w-full sm:w-1/4 sm:min-w-[100px] ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}
                                     />
                                     <div className="flex gap-2 w-full sm:flex-1">
@@ -463,7 +486,11 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
                                             <Input
                                                 placeholder="Paste link or text..."
                                                 value={item.value}
-                                                onChange={(e) => handleItemChange(originalIndex, originalItemIndex, 'value', e.target.value)}
+                                                onChange={(e) => {
+                                                    if (originalCategoryIndex !== -1 && originalItemIndex !== -1) {
+                                                        handleItemChange(originalCategoryIndex, originalItemIndex, 'value', e.target.value)
+                                                    }
+                                                }}
                                                 className={`flex-1 font-mono text-sm ${isUrl ? "text-blue-500 underline decoration-blue-500/30" : ""} ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}
                                             />
                                         </div>
@@ -483,7 +510,17 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
                                             <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground" onClick={() => handleCopy(item.value)} title="Copy Value">
                                                 <Copy className="h-4 w-4" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteItem(originalIndex, originalItemIndex)} title="Delete Row">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive" 
+                                                onClick={() => {
+                                                    if (originalCategoryIndex !== -1 && originalItemIndex !== -1) {
+                                                        handleDeleteItem(originalCategoryIndex, originalItemIndex)
+                                                    }
+                                                }} 
+                                                title="Delete Row"
+                                            >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
@@ -491,7 +528,10 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
                                 </div>
                             );
                         })}
-                         <Button variant="ghost" size="sm" onClick={() => handleAddItem(originalIndex)} className="self-start mt-1 text-muted-foreground hover:text-foreground">
+                         <Button variant="ghost" size="sm" onClick={() => {
+                             const originalCategoryIndex = categories.findIndex(c => c._id === category._id || c === category);
+                             if (originalCategoryIndex !== -1) handleAddItem(originalCategoryIndex);
+                         }} className="self-start mt-1 text-muted-foreground hover:text-foreground">
                             <Plus className="h-3 w-3 mr-2" /> Add Row
                         </Button>
                     </div>
