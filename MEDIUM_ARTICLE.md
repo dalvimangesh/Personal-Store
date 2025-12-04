@@ -56,6 +56,12 @@ Personal Store features a global **Privacy Mode**. One click blurs all sensitive
 #### 6. 🔒 Encrypted Database
 Your privacy is paramount. Unlike typical chat apps or note-taking tools that often store text in plain sight, Personal Store encrypts **all your data**. Whether it's a todo list, a code snippet, or a saved link, your content is encrypted before it ever hits the database. This ensures that your information remains secure and private at rest.
 
+#### 7. 🤝 Collaborative Workspaces (New!)
+Personal Store has evolved from a solo tool to a collaborative powerhouse. You can now invite others to specific parts of your vault without sharing your login.
+*   **Shared Link Categories:** Planning a trip or managing a team project? You can share individual Link Store categories with other users. They can view, add, and edit links within that category instantly.
+*   **Shared Clipboards:** Need a real-time text buffer between you and a colleague? Create a dedicated Clipboard tab and share it. It acts as a synchronized scratchpad for your team.
+*   **Granular Control:** You stay in charge. Owners can add or remove members by username, while collaborators can contribute freely or leave the shared resource when they're done.
+
 ---
 
 ## Under the Hood: A Modern Tech Stack

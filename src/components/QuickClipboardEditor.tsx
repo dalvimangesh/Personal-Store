@@ -3,7 +3,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, Plus, X, Users, Shield, LogOut, UserPlus, UserMinus } from "lucide-react";
+import { Loader2, Plus, X, Users, Shield, LogOut, UserPlus, UserMinus, Globe, Copy, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
     Dialog,
@@ -28,6 +28,8 @@ interface Clipboard {
   ownerId?: string;
   ownerUsername?: string;
   sharedWith?: SharedUser[];
+  isPublic?: boolean;
+  publicToken?: string;
 }
 
 export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?: boolean }) {
@@ -284,6 +286,42 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
       }
   };
 
+  const handlePublicToggle = async () => {
+      const activeClipboard = clipboards[activeTab];
+      if (!activeClipboard) return;
+      setIsSharing(true);
+      try {
+          const res = await fetch("/api/quick-clip/share", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  clipboardId: activeClipboard._id,
+                  action: 'public_toggle'
+              })
+          });
+          const data = await res.json();
+          if (res.ok) {
+              const newClipboard = { 
+                  ...activeClipboard, 
+                  isPublic: data.data.isPublic, 
+                  publicToken: data.data.publicToken 
+              };
+               
+               const newClipboards = [...clipboards];
+               newClipboards[activeTab] = newClipboard;
+               setClipboards(newClipboards);
+               toast.success(data.data.isPublic ? "Public link created" : "Public link disabled");
+          } else {
+              toast.error(data.error || "Failed to toggle public link");
+          }
+      } catch (error) {
+          toast.error("Error toggling public link");
+      } finally {
+          setIsSharing(false);
+      }
+  };
+
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -411,11 +449,66 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
                 <DialogHeader>
                     <DialogTitle>Share "{activeClipboard.name}"</DialogTitle>
                     <DialogDescription>
-                        Invite others to view and edit this clipboard.
+                        Manage access and public links.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex flex-col gap-4 py-4">
+                <div className="flex flex-col gap-6 py-4">
+                    {/* Public Link Section */}
+                    <div className="flex flex-col gap-2 p-4 bg-muted/30 rounded-lg border">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="bg-primary/10 p-2 rounded-full">
+                                    <Globe className="h-4 w-4 text-primary" />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-medium">Public Link</h4>
+                                    <p className="text-xs text-muted-foreground">
+                                        Anyone with the link can view this clipboard.
+                                    </p>
+                                </div>
+                            </div>
+                            <Button 
+                                variant={activeClipboard.isPublic ? "destructive" : "default"} 
+                                size="sm" 
+                                onClick={handlePublicToggle}
+                                disabled={isSharing}
+                            >
+                                {activeClipboard.isPublic ? "Disable" : "Enable"}
+                            </Button>
+                        </div>
+
+                        {activeClipboard.isPublic && activeClipboard.publicToken && (
+                            <div className="flex items-center gap-2 mt-2">
+                                <Input 
+                                    readOnly 
+                                    value={`${window.location.origin}/public/clip/${activeClipboard.publicToken}`}
+                                    className="text-xs font-mono h-8"
+                                />
+                                <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="h-8 w-8 shrink-0"
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(`${window.location.origin}/public/clip/${activeClipboard.publicToken}`);
+                                        toast.success("Link copied!");
+                                    }}
+                                >
+                                    <Copy className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="h-8 w-8 shrink-0"
+                                    onClick={() => window.open(`${window.location.origin}/public/clip/${activeClipboard.publicToken}`, '_blank')}
+                                >
+                                    <ExternalLink className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col gap-4">
                     <div className="flex items-end gap-2">
                         <div className="grid gap-1 w-full">
                             <Label htmlFor="username">Add by username</Label>
@@ -459,6 +552,7 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
                         ) : (
                             <p className="text-sm text-muted-foreground italic">Not shared with anyone yet.</p>
                         )}
+                    </div>
                     </div>
                 </div>
             </DialogContent>

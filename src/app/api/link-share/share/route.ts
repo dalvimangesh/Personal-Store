@@ -84,6 +84,30 @@ export async function POST(request: Request) {
         await linkShare.save();
 
         return NextResponse.json({ success: true, data: { message: "Left category" } });
+
+    } else if (action === 'public_toggle') {
+        // Toggle public access
+        const linkShare = await LinkShare.findOne({ userId });
+        if (!linkShare) return NextResponse.json({ success: false, error: "LinkShare not found" }, { status: 404 });
+
+        const category = linkShare.categories.id(categoryId);
+        if (!category) return NextResponse.json({ success: false, error: "Category not found" }, { status: 404 });
+
+        category.isPublic = !category.isPublic;
+        
+        if (category.isPublic && !category.publicToken) {
+            category.publicToken = crypto.randomUUID();
+        }
+
+        await linkShare.save();
+
+        return NextResponse.json({ 
+            success: true, 
+            data: { 
+                isPublic: category.isPublic, 
+                publicToken: category.publicToken 
+            } 
+        });
     }
 
     return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 });

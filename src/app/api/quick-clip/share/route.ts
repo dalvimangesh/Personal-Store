@@ -81,6 +81,29 @@ export async function POST(request: Request) {
         await quickClip.save();
 
         return NextResponse.json({ success: true, data: { message: "Left clipboard" } });
+
+    } else if (action === 'public_toggle') {
+        const quickClip = await QuickClip.findOne({ userId });
+        if (!quickClip) return NextResponse.json({ success: false, error: "QuickClip not found" }, { status: 404 });
+
+        const clipboard = quickClip.clipboards.id(clipboardId);
+        if (!clipboard) return NextResponse.json({ success: false, error: "Clipboard not found" }, { status: 404 });
+
+        clipboard.isPublic = !clipboard.isPublic;
+        
+        if (clipboard.isPublic && !clipboard.publicToken) {
+            clipboard.publicToken = crypto.randomUUID();
+        }
+
+        await quickClip.save();
+
+        return NextResponse.json({ 
+            success: true, 
+            data: { 
+                isPublic: clipboard.isPublic, 
+                publicToken: clipboard.publicToken 
+            } 
+        });
     }
 
     return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 });

@@ -26,7 +26,9 @@ const LinkItemSchema = new Schema({
 const LinkCategorySchema = new Schema({
   name: { type: String, default: "Default" },
   items: [LinkItemSchema],
-  sharedWith: [{ type: Schema.Types.ObjectId, ref: 'User' }]
+  sharedWith: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  isPublic: { type: Boolean, default: false },
+  publicToken: { type: String }
 });
 
 const LinkShareSchema: Schema = new Schema(
@@ -52,7 +54,7 @@ if (mongoose.models.LinkShare) {
   } else {
     // Check for sharedWith in subschema
     const categoriesPath = schema.paths['categories'] as mongoose.Schema.Types.DocumentArray;
-    if (categoriesPath.schema && !categoriesPath.schema.paths['sharedWith']) {
+    if (categoriesPath.schema && (!categoriesPath.schema.paths['sharedWith'] || !categoriesPath.schema.paths['publicToken'])) {
          delete mongoose.models.LinkShare;
     }
   }
