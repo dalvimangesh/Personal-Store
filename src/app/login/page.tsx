@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CardTitle, CardDescription, CardFooter, CardHeader } from "@/components/ui/card";
+import { Card, CardTitle, CardDescription, CardFooter, CardHeader, CardContent } from "@/components/ui/card";
 import { ModeToggle } from "@/components/ModeToggle";
 
 export default function LoginPage() {
