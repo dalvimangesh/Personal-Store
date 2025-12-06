@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, ExternalLink, Copy, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import { ModeToggle } from "@/components/ModeToggle";
 
 interface LinkItem {
   label: string;
@@ -81,7 +82,10 @@ export default function PublicLinkPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="min-h-screen bg-background p-4 md:p-8 relative">
+      <div className="absolute top-4 right-4 md:top-8 md:right-8 z-10">
+        <ModeToggle />
+      </div>
       <div className="max-w-4xl mx-auto space-y-6">
         <Card>
           <CardHeader>

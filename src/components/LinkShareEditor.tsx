@@ -450,7 +450,7 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
                         <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground opacity-0 group-hover/cat:opacity-100 transition-opacity" 
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground opacity-100 sm:opacity-0 sm:group-hover/cat:opacity-100 transition-opacity" 
                             onClick={() => handleOpenCategoryLinks(category)} 
                             title="Open All Links in Category"
                         >
@@ -462,7 +462,7 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
                              <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-8 w-8 text-muted-foreground hover:text-blue-500 opacity-0 group-hover/cat:opacity-100 transition-opacity" 
+                                className="h-8 w-8 text-muted-foreground hover:text-blue-500 opacity-100 sm:opacity-0 sm:group-hover/cat:opacity-100 transition-opacity" 
                                 onClick={() => openShareDialog(category)}
                                 title="Share Category"
                             >
@@ -473,7 +473,7 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
                          <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover/cat:opacity-100 transition-opacity" 
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-100 sm:opacity-0 sm:group-hover/cat:opacity-100 transition-opacity" 
                             onClick={() => handleDeleteCategory(originalIndex)} 
                             title={isOwner ? "Delete Category" : "Leave Category"}
                         >
@@ -505,7 +505,7 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
                             const isUrl = isValidUrl(item.value);
                             return (
                                 <div key={item._id || filteredItemIndex} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center group p-3 sm:p-0 border sm:border-0 rounded-lg bg-muted/10 sm:bg-transparent w-full">
-                                    <GripVertical className="h-4 w-4 text-muted-foreground/20 cursor-grab active:cursor-grabbing hidden sm:block" />
+                                    <GripVertical className="h-4 w-4 text-muted-foreground/20 cursor-grab active:cursor-grabbing hidden sm:block opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
                                     
                                     <Input
                                         placeholder="Label"

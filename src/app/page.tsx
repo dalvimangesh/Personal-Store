@@ -32,6 +32,7 @@ import { UserProfileDialog } from "@/components/UserProfileDialog";
 import { Inbox, Info } from "lucide-react";
 import { FeaturesList } from "@/components/FeaturesList";
 import { SecretCreator } from "@/components/SecretCreator";
+import { ModeToggle } from "@/components/ModeToggle";
 
 // Privacy Context
 const PrivacyContext = createContext<{
@@ -47,12 +48,13 @@ const PrivacyContext = createContext<{
   selectedTag: string | null;
   showHidden: boolean;
   currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store';
+  isPrivacyMode: boolean;
   onSelectTag: (tag: string | null) => void;
   onToggleHidden: (show: boolean) => void;
   onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store') => void;
 }
 
-const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
+const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivacyMode, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
   <div className="space-y-4">
     <div className="px-3 py-2">
       <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
@@ -146,15 +148,17 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, onSelect
               <Button
                 key={tag}
                 variant={currentView === 'snippets' && selectedTag === tag ? "secondary" : "ghost"}
-                className="w-full justify-start h-8"
+                className={`w-full justify-start h-8 group ${isPrivacyMode ? "text-transparent select-none" : ""}`}
                 onClick={() => {
                     onViewChange('snippets');
                     onSelectTag(tag);
                     onToggleHidden(false);
                 }}
               >
-                <Tag className="mr-2 h-4 w-4" />
-                {tag}
+                <Tag className={`mr-2 h-4 w-4 ${isPrivacyMode ? "text-muted-foreground" : ""}`} />
+                <span className={isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300 text-foreground" : ""}>
+                    {tag}
+                </span>
               </Button>
             ))}
         </div>
@@ -355,8 +359,12 @@ export default function Home() {
                 selectedTag={selectedTag} 
                 showHidden={showHidden}
                 currentView={currentView}
+                isPrivacyMode={isPrivacyMode}
                 onSelectTag={setSelectedTag} 
-                onToggleHidden={setShowHidden}
+                onToggleHidden={(hidden) => {
+                    setShowHidden(hidden);
+                    if (hidden) setSelectedTag(null);
+                }}
                 onViewChange={handleViewChange}
             />
             <div className="px-3 py-2 mt-4">
@@ -405,13 +413,14 @@ export default function Home() {
                         selectedTag={selectedTag}
                         showHidden={showHidden}
                         currentView={currentView}
+                        isPrivacyMode={isPrivacyMode}
                         onSelectTag={(tag) => {
                             setSelectedTag(tag);
                             setShowHidden(false);
                         }}
                         onToggleHidden={(hidden) => {
                             setShowHidden(hidden);
-                            setSelectedTag(null);
+                            if (hidden) setSelectedTag(null);
                         }}
                         onViewChange={handleViewChange}
                         />
@@ -468,6 +477,7 @@ export default function Home() {
               )}
               <div className={`flex items-center gap-2 w-full md:w-auto justify-between ${(currentView === 'quick-clip' || currentView === 'about' || currentView === 'secret-store') ? 'md:justify-end md:ml-auto' : 'md:justify-start'}`}>
                 <div className="flex items-center gap-2">
+                  <ModeToggle />
                   <Button 
                       variant={isPrivacyMode ? "destructive" : "outline"}
                       size="icon"
@@ -683,7 +693,7 @@ export default function Home() {
                     {snippet.tags.slice(0, 3).map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center rounded-sm border px-1.5 py-0.5 text-[10px] font-medium bg-secondary text-secondary-foreground cursor-pointer hover:bg-secondary/80"
+                        className={`inline-flex items-center rounded-sm border px-1.5 py-0.5 text-[10px] font-medium bg-secondary text-secondary-foreground cursor-pointer hover:bg-secondary/80 ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}
                         onClick={(e) => {
                             e.stopPropagation();
                             setSelectedTag(tag);
