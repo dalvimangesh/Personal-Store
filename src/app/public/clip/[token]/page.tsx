@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Loader2, Copy, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
-import { ModeToggle } from "@/components/ModeToggle";
 
 interface PublicClipboard {
   name: string;
@@ -78,10 +77,7 @@ export default function PublicClipPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8 flex flex-col relative">
-      <div className="absolute top-4 right-4 md:top-8 md:right-8 z-10">
-        <ModeToggle />
-      </div>
+    <div className="min-h-screen bg-background p-4 md:p-8 flex flex-col">
       <div className="max-w-4xl mx-auto w-full flex-1 flex flex-col max-h-[calc(100vh-4rem)]">
         <Card className="flex-1 flex flex-col overflow-hidden border-0 shadow-none sm:border sm:shadow-sm">
           <CardHeader className="flex-none px-4 sm:px-6">
