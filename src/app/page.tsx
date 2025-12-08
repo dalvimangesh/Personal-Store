@@ -392,8 +392,8 @@ export default function Home() {
 
       {/* Main Content Area - Using Flex to adjust width when editor is open */}
       <div className="flex flex-1 min-w-0 overflow-hidden">
-        <main className={`flex-1 p-4 md:p-8 min-w-0 w-full flex flex-col ${currentView === 'dropzone' ? 'overflow-hidden h-[100dvh]' : 'overflow-y-auto h-screen'}`}>
-          <header className="flex flex-col gap-4 mb-6 shrink-0">
+        <main className={`flex-1 p-4 md:p-8 min-w-0 w-full flex flex-col ${currentView === 'dropzone' ? 'overflow-hidden h-[100dvh]' : 'overflow-y-auto h-screen relative'}`}>
+          <header className="flex flex-col gap-4 mb-6 shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20 pt-2">
             <div className="flex items-center justify-between md:hidden">
               <h1 className="text-xl font-bold tracking-tight">Personal Store</h1>
               <Sheet>

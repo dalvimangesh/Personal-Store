@@ -45,6 +45,10 @@ const LinkShareSchema: Schema = new Schema(
   }
 );
 
+// Optimize queries for shared links and public access
+LinkShareSchema.index({ "categories.sharedWith": 1 });
+LinkShareSchema.index({ "categories.publicToken": 1 });
+
 // Handling Hot Reload in Next.js:
 // If the model exists but the schema is old (missing categories or sharedWith), delete it so it recompiles.
 if (mongoose.models.LinkShare) {

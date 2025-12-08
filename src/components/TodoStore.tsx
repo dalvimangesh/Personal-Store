@@ -151,7 +151,7 @@ export function TodoStore({ searchQuery = "", isPrivacyMode = false }: { searchQ
 
   return (
     <div className="flex flex-col h-full gap-6 w-full pb-10">
-      <div className="flex items-center justify-between px-1">
+      <div className="flex items-center justify-between px-1 sticky top-0 bg-background/95 backdrop-blur z-10 py-2 border-b">
         <p className="text-sm text-muted-foreground">
           Manage your tasks with priority (0-9), deadlines, and descriptions.
         </p>
