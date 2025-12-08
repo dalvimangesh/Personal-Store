@@ -23,6 +23,9 @@ const SharedSnippetSchema: Schema = new Schema(
   }
 );
 
+SharedSnippetSchema.index({ userId: 1 });
+SharedSnippetSchema.index({ allowedUsers: 1 });
+
 export default mongoose.models.SharedSnippet ||
   mongoose.model<ISharedSnippet>('SharedSnippet', SharedSnippetSchema);
 

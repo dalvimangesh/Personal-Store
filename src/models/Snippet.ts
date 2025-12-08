@@ -23,5 +23,7 @@ const SnippetSchema: Schema = new Schema(
   }
 );
 
+SnippetSchema.index({ userId: 1 });
+
 export default mongoose.models.Snippet ||
   mongoose.model<ISnippet>('Snippet', SnippetSchema);

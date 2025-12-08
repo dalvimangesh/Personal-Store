@@ -33,6 +33,9 @@ const TodoSchema: Schema = new Schema(
   }
 );
 
+// Optimize query: .find({ userId }).sort({ isCompleted: 1, priority: -1, createdAt: -1 })
+TodoSchema.index({ userId: 1, isCompleted: 1, priority: -1, createdAt: -1 });
+
 // Prevent Mongoose OverwriteModelError in development by checking if model exists
 // However, to ensure schema updates are applied in dev without restart, we can delete the model
 if (process.env.NODE_ENV !== 'production' && mongoose.models.Todo) {
