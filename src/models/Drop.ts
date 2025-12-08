@@ -18,4 +18,7 @@ const DropSchema: Schema = new Schema(
   }
 );
 
+DropSchema.index({ userId: 1 });
+DropSchema.index({ senderId: 1 });
+
 export default mongoose.models.Drop || mongoose.model<IDrop>('Drop', DropSchema);

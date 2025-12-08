@@ -21,6 +21,8 @@ const DeletedItemSchema: Schema = new Schema(
   }
 );
 
+DeletedItemSchema.index({ userId: 1 });
+
 export default mongoose.models.DeletedItem ||
   mongoose.model<IDeletedItem>('DeletedItem', DeletedItemSchema);
 
