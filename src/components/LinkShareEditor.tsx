@@ -411,7 +411,7 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
 
   return (
     <div className="flex flex-col h-full gap-6 w-full pb-10">
-        <div className="flex items-center justify-between px-1">
+        <div className="flex items-center justify-between px-1 sticky top-0 bg-background/95 backdrop-blur z-10 py-2 border-b">
             <p className="text-sm text-muted-foreground">
             Share links or short text between devices.
             </p>

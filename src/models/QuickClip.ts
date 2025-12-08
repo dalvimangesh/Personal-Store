@@ -35,6 +35,10 @@ const QuickClipSchema: Schema = new Schema(
   }
 );
 
+// Optimize queries for shared clipboards and public access
+QuickClipSchema.index({ "clipboards.sharedWith": 1 });
+QuickClipSchema.index({ "clipboards.publicToken": 1 });
+
 // Handling Hot Reload in Next.js:
 if (mongoose.models.QuickClip) {
     const schema = mongoose.models.QuickClip.schema;
