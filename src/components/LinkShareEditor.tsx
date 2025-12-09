@@ -120,7 +120,33 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
             body: JSON.stringify({ categories: ownedCategories }),
         });
         
-        if (!res.ok) throw new Error("Failed to save owned categories");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to save owned categories");
+
+            // Update state with returned IDs for owned categories
+        if (data.data && data.data.categories) {
+            const savedOwned = data.data.categories;
+            setCategories(prevCats => {
+                let savedIndex = 0;
+                return prevCats.map(cat => {
+                    if (cat.isOwner !== false) {
+                        // This is an owned category
+                        if (savedIndex < savedOwned.length) {
+                            const savedCat = savedOwned[savedIndex];
+                            savedIndex++;
+                            // Patch ID and public token if missing
+                            return {
+                                ...cat,
+                                _id: savedCat._id,
+                                publicToken: savedCat.publicToken || cat.publicToken,
+                                // We preserve local 'name' and 'items' to not overwrite concurrent edits
+                            };
+                        }
+                    }
+                    return cat;
+                });
+            });
+        }
 
         // 2. Update shared categories individually
         // Note: This is inefficient if many shared categories change at once, 
@@ -266,6 +292,12 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
 
   // Sharing Logic
   const openShareDialog = (category: LinkCategory) => {
+      if (!category._id) {
+          toast.warning("Please wait for the category to be saved before sharing.");
+          // Ensure we trigger a save if not already saving?
+          // It should be auto-saving.
+          return;
+      }
       setSelectedCategory(category);
       setShareUsername("");
       setShareDialogOpen(true);
@@ -586,7 +618,7 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
         <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Share "{selectedCategory?.name}"</DialogTitle>
+                    <DialogTitle>Share &quot;{selectedCategory?.name}&quot;</DialogTitle>
                     <DialogDescription>
                         Manage access and public links.
                     </DialogDescription>
