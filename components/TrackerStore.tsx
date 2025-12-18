@@ -451,7 +451,7 @@ function SortableColumn({
                         isPrivacyMode={isPrivacyMode}
                         onDelete={() => onDeleteCard(card.id)}
                         onEdit={() => onEditCard(card.id)}
-                        onMove={(newColId) => onUpdateCard(card.id, { columnId: newColId })}
+                        onMove={(newColId: string) => onUpdateCard(card.id, { columnId: newColId })}
                     />
                 )
                 ))}
