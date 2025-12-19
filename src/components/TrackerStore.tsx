@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, ExternalLink, MoreVertical, Trash2, Edit2, Layout, Settings } from 'lucide-react';
+import { Plus, X, ExternalLink, MoreVertical, Trash2, Edit2, Layout, Settings, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -433,7 +433,11 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
   };
 
   if (isBoardLoading) {
-    return <div className="flex items-center justify-center h-full text-muted-foreground">Loading boards...</div>;
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -491,77 +495,79 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
 
         {/* Board Content */}
         {isLoading ? (
-             <div className="flex items-center justify-center h-full text-muted-foreground">Loading board data...</div>
+             <div className="flex items-center justify-center h-full text-muted-foreground">
+                 <Loader2 className="h-8 w-8 animate-spin" />
+             </div>
         ) : (
-            <DndContext
-            sensors={sensors}
-            collisionDetection={closestCorners}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDragEnd={handleDragEnd}
-            >
-                <div className="flex overflow-x-auto pb-4 gap-2 items-start h-full">
-                {columns.map(column => (
-                    <SortableColumn 
-                        key={column.id} 
-                        column={column} 
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+        <div className="flex overflow-x-auto pb-4 gap-2 items-start h-full">
+        {columns.map(column => (
+            <SortableColumn 
+                key={column.id} 
+                column={column} 
                         columns={columns}
-                        cards={cards.filter(c => c.columnId === column.id)}
-                        isPrivacyMode={isPrivacyMode}
-                        onDeleteColumn={handleDeleteColumn}
-                        onDeleteCard={handleDeleteCard}
-                        onEditCard={setEditingCardId}
-                        editingCardId={editingCardId}
-                        onUpdateCard={handleUpdateCard}
-                        onCancelEdit={() => setEditingCardId(null)}
-                        onAddCard={handleAddCard}
-                    />
-                ))}
+                cards={cards.filter(c => c.columnId === column.id)}
+                isPrivacyMode={isPrivacyMode}
+                onDeleteColumn={handleDeleteColumn}
+                onDeleteCard={handleDeleteCard}
+                onEditCard={setEditingCardId}
+                editingCardId={editingCardId}
+                onUpdateCard={handleUpdateCard}
+                onCancelEdit={() => setEditingCardId(null)}
+                onAddCard={handleAddCard}
+            />
+        ))}
 
-                <div className="w-64 shrink-0">
-                    {isAddingColumn ? (
-                    <div className="bg-background border rounded-lg p-2 space-y-2">
-                        <Input 
-                        placeholder="Column title..." 
-                        value={newColumnTitle} 
-                        onChange={e => setNewColumnTitle(e.target.value)}
-                        autoFocus
-                        className="h-8 text-sm"
-                        onKeyDown={e => {
-                            if (e.key === 'Enter') handleAddColumn();
-                            if (e.key === 'Escape') setIsAddingColumn(false);
-                        }}
-                        />
-                        <div className="flex gap-2">
-                        <Button size="sm" className="h-7 text-xs" onClick={handleAddColumn}>Add</Button>
-                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setIsAddingColumn(false)}>Cancel</Button>
-                        </div>
-                    </div>
-                    ) : (
-                    <Button 
-                        variant="outline" 
-                        className="w-full h-10 border-dashed text-xs"
-                        onClick={() => setIsAddingColumn(true)}
-                    >
-                        <Plus className="mr-2 h-3 w-3" /> Add Column
-                    </Button>
-                    )}
+        <div className="w-64 shrink-0">
+            {isAddingColumn ? (
+            <div className="bg-background border rounded-lg p-2 space-y-2">
+                <Input 
+                placeholder="Column title..." 
+                value={newColumnTitle} 
+                onChange={e => setNewColumnTitle(e.target.value)}
+                autoFocus
+                className="h-8 text-sm"
+                onKeyDown={e => {
+                    if (e.key === 'Enter') handleAddColumn();
+                    if (e.key === 'Escape') setIsAddingColumn(false);
+                }}
+                />
+                <div className="flex gap-2">
+                <Button size="sm" className="h-7 text-xs" onClick={handleAddColumn}>Add</Button>
+                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setIsAddingColumn(false)}>Cancel</Button>
                 </div>
-                </div>
-                <DragOverlay>
-                    {activeCard ? (
-                        <TrackerCard 
-                            card={activeCard} 
-                            columns={[]} // Not needed for overlay
-                            isPrivacyMode={isPrivacyMode}
-                            onDelete={() => {}}
-                            onEdit={() => {}}
-                            onMove={() => {}}
-                            isOverlay
-                        />
-                    ) : null}
-                </DragOverlay>
-            </DndContext>
+            </div>
+            ) : (
+            <Button 
+                variant="outline" 
+                className="w-full h-10 border-dashed text-xs"
+                onClick={() => setIsAddingColumn(true)}
+            >
+                <Plus className="mr-2 h-3 w-3" /> Add Column
+            </Button>
+            )}
+        </div>
+        </div>
+        <DragOverlay>
+            {activeCard ? (
+                <TrackerCard 
+                    card={activeCard} 
+                    columns={[]} // Not needed for overlay
+                    isPrivacyMode={isPrivacyMode}
+                    onDelete={() => {}}
+                    onEdit={() => {}}
+                    onMove={() => {}}
+                    isOverlay
+                />
+            ) : null}
+        </DragOverlay>
+    </DndContext>
         )}
 
         {/* Create Board Dialog */}
