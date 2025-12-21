@@ -2,7 +2,7 @@
 
 import { useState, useMemo, createContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame, SquareKanban } from "lucide-react";
+import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame, SquareKanban, Activity } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ import { SharedSnippetEditor } from "@/components/SharedSnippetEditor";
 import { DropzoneManager } from "@/components/DropzoneManager";
 import { TrashStore } from "@/components/TrashStore";
 import { TodoStore } from "@/components/TodoStore";
+import { HabitStore } from "@/components/HabitStore";
 import { TrackerStore } from "@/components/TrackerStore";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
 import { Inbox, Info } from "lucide-react";
@@ -48,11 +49,11 @@ const PrivacyContext = createContext<{
   uniqueTags: string[];
   selectedTag: string | null;
   showHidden: boolean;
-  currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker';
+  currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit';
   isPrivacyMode: boolean;
   onSelectTag: (tag: string | null) => void;
   onToggleHidden: (show: boolean) => void;
-  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker') => void;
+  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit') => void;
 }
 
 const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivacyMode, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
@@ -85,6 +86,14 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivac
         >
             <SquareKanban className="mr-2 h-4 w-4" />
             Tracking Store
+        </Button>
+        <Button
+            variant={currentView === 'habit' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('habit')}
+        >
+            <Activity className="mr-2 h-4 w-4" />
+            Habit Store
         </Button>
         <Button
             variant={currentView === 'link-share' ? "secondary" : "ghost"}
@@ -196,7 +205,7 @@ export default function Home() {
     deleteSnippet: deleteSharedSnippet,
   } = useSharedSnippets();
 
-  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker'>('snippets');
+  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit'>('snippets');
   const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
   const [selectedSharedSnippet, setSelectedSharedSnippet] = useState<SharedSnippet | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -342,7 +351,7 @@ export default function Home() {
   };
 
   // Helper to switch views
-  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker') => {
+  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit') => {
       setCurrentView(view);
       // Reset search when switching views (optional, but often good UX)
       // setGenericSearchQuery(""); 
@@ -460,7 +469,7 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col md:flex-row items-center gap-3 md:gap-4 w-full">
-              {currentView !== 'quick-clip' && currentView !== 'about' && currentView !== 'secret-store' && currentView !== 'tracker' && (
+              {currentView !== 'quick-clip' && currentView !== 'about' && currentView !== 'secret-store' && currentView !== 'tracker' && currentView !== 'habit' && (
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -522,7 +531,7 @@ export default function Home() {
                     <Button onClick={() => openSharedEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
                         <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Public</span><span className="sm:hidden">Add</span>
                     </Button>
-                ) : (currentView === 'todo' || currentView === 'secret-store' || currentView === 'tracker') ? null : (
+                ) : (currentView === 'todo' || currentView === 'secret-store' || currentView === 'tracker' || currentView === 'habit') ? null : (
                     <Button onClick={() => openEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
                         <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Snippet</span><span className="sm:hidden">Add</span>
                     </Button>
@@ -561,6 +570,10 @@ export default function Home() {
           ) : currentView === 'todo' ? (
              <div className="flex-1 h-full min-h-[500px] w-full">
                 <TodoStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
+             </div>
+          ) : currentView === 'habit' ? (
+             <div className="flex-1 h-full min-h-[500px] w-full">
+                <HabitStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
              </div>
           ) : currentView === 'link-share' ? (
              <div className="flex-1 h-full min-h-[500px] w-full">

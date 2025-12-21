@@ -35,9 +35,9 @@ export async function POST(request: Request) {
     const newOrder = lastColumn ? lastColumn.order + 1 : 0;
     
     const columnData: any = {
-        user: userId,
-        title: body.title,
-        order: newOrder
+      user: userId,
+      title: body.title,
+      order: newOrder
     };
     if (body.boardId) {
         columnData.boardId = body.boardId;
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     
     // Check if column is an array (handle edge case with create returning array in some mongoose versions or configs)
     const newColumn = Array.isArray(column) ? column[0] : column;
-
+    
     return NextResponse.json({  
       success: true, 
       data: {
