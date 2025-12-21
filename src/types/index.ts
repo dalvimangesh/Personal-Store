@@ -36,3 +36,24 @@ export interface Todo {
   status: 'todo' | 'in_progress' | 'completed';
   createdAt: Date;
 }
+
+export interface Habit {
+  id: string;
+  title: string;
+  description?: string;
+  goalValue?: number;
+  goalUnit?: string;
+  frequency: 'daily' | 'weekly';
+  createdAt: Date;
+  updatedAt: Date;
+  logs?: HabitLog[];
+}
+
+export interface HabitLog {
+  id: string;
+  habitId: string;
+  date: string; // YYYY-MM-DD
+  value?: number;
+  completed: boolean;
+  createdAt: Date;
+}
