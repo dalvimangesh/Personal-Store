@@ -32,9 +32,21 @@ export interface Todo {
   priority: number;
   startDate?: Date;
   deadline?: Date;
-  isCompleted: boolean; // Keep for backward compatibility if needed, or map to status
+  isCompleted: boolean; 
   status: 'todo' | 'in_progress' | 'completed';
   createdAt: Date;
+}
+
+export interface TodoCategory {
+  _id?: string;
+  name: string;
+  items: Todo[];
+  isOwner?: boolean;
+  ownerId?: string;
+  ownerUsername?: string;
+  sharedWith?: { userId: string; username: string }[];
+  isPublic?: boolean;
+  publicToken?: string;
 }
 
 export interface Habit {

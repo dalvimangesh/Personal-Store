@@ -514,6 +514,13 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
                     </div>
 
                     <div className={`flex flex-col gap-2 pl-4 border-l-2 ${isShared ? 'border-blue-500/30' : 'border-muted'}`}>
+                        <Button variant="ghost" size="sm" onClick={() => {
+                             const originalCategoryIndex = categories.findIndex(c => c._id === category._id || c === category);
+                             if (originalCategoryIndex !== -1) handleAddItem(originalCategoryIndex);
+                        }} className="self-start mb-1 text-muted-foreground hover:text-foreground">
+                            <Plus className="h-3 w-3 mr-2" /> Add Row
+                        </Button>
+
                         {category.items.map((item, filteredItemIndex) => {
                             // Map back to original item index
                             // Safety check: category might be a filtered object, but we need to find it in the main 'categories' state
@@ -596,12 +603,6 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false }: { s
                                 </div>
                             );
                         })}
-                         <Button variant="ghost" size="sm" onClick={() => {
-                             const originalCategoryIndex = categories.findIndex(c => c._id === category._id || c === category);
-                             if (originalCategoryIndex !== -1) handleAddItem(originalCategoryIndex);
-                         }} className="self-start mt-1 text-muted-foreground hover:text-foreground">
-                            <Plus className="h-3 w-3 mr-2" /> Add Row
-                        </Button>
                     </div>
                 </div>
                 );

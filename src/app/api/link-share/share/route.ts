@@ -4,6 +4,7 @@ import User from '@/models/User';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
+import crypto from 'crypto';
 
 export async function POST(request: Request) {
   await dbConnect();
