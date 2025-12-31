@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import "./globals.css";
 
 export const metadata: Metadata = {
+// ... existing metadata ...
   metadataBase: new URL('https://personal-store-alpha.vercel.app'),
   title: {
     default: "Personal Store - Your Centralized Clipboard Vault",
@@ -85,15 +87,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased font-sans">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-          <Toaster />
-        </ThemeProvider>
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

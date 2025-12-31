@@ -20,6 +20,7 @@ import {
   Activity,
   Trash2
 } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -120,6 +121,32 @@ export default function LoginPage() {
       router.refresh();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Something went wrong";
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: credentialResponse.credential }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Google login failed");
+      }
+
+      toast.success("Logged in with Google successfully");
+      router.push("/");
+      router.refresh();
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Google login failed";
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -267,6 +294,25 @@ export default function LoginPage() {
                     )}
                   </Button>
                 </form>
+
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center justify-center w-full">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => toast.error("Google Login Failed")}
+                    theme="filled_blue"
+                    shape="rectangular"
+                    width="100%"
+                  />
+                </div>
               </CardContent>
               <CardFooter className="flex flex-col space-y-3 text-center border-t py-4 px-6 bg-muted/30">
                   <p className="text-xs text-muted-foreground">
