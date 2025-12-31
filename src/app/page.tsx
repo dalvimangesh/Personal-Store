@@ -2,6 +2,7 @@
 
 import { useState, useMemo, createContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame, SquareKanban, Activity } from "lucide-react";
 import { toast } from "sonner";
 
@@ -368,7 +369,16 @@ export default function Home() {
     <PrivacyContext.Provider value={{ isPrivacyMode, togglePrivacyMode }}>
     <div className="min-h-screen bg-background flex">
       <aside className="hidden md:flex flex-col w-64 border-r h-screen p-4 sticky top-0">
-        <div className="mb-6 px-4 shrink-0">
+        <div className="mb-6 px-4 shrink-0 flex items-center gap-2">
+          <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center p-1">
+            <Image 
+              src="/logo.svg" 
+              alt="Personal Store Logo" 
+              width={24} 
+              height={24} 
+              className="invert dark:invert-0"
+            />
+          </div>
           <h1 className="text-xl font-bold tracking-tight">Personal Store</h1>
         </div>
         <div className="flex-1 overflow-y-auto">
@@ -413,7 +423,18 @@ export default function Home() {
         <main className={`flex-1 p-4 md:p-8 min-w-0 w-full flex flex-col ${currentView === 'dropzone' ? 'overflow-hidden h-[100dvh]' : 'overflow-y-auto h-screen relative'}`}>
           <header className="flex flex-col gap-4 mb-6 shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20 pt-2">
             <div className="flex items-center justify-between md:hidden">
-              <h1 className="text-xl font-bold tracking-tight">Personal Store</h1>
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center p-1">
+                  <Image 
+                    src="/logo.svg" 
+                    alt="Personal Store Logo" 
+                    width={24} 
+                    height={24} 
+                    className="invert dark:invert-0"
+                  />
+                </div>
+                <h1 className="text-xl font-bold tracking-tight">Personal Store</h1>
+              </div>
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="icon">
@@ -595,16 +616,28 @@ export default function Home() {
             <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden overflow-y-auto p-6">
                 <div className="max-w-4xl mx-auto space-y-8">
                     <div className="space-y-4">
-                        <h1 className="text-4xl font-bold tracking-tight">Personal Store</h1>
+                        <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center p-2">
+                                <Image 
+                                    src="/logo.svg" 
+                                    alt="Personal Store Logo" 
+                                    width={48} 
+                                    height={48} 
+                                    className="invert dark:invert-0"
+                                />
+                            </div>
+                            <h1 className="text-4xl font-bold tracking-tight">Personal Store</h1>
+                        </div>
                         <p className="text-xl text-muted-foreground">
-                            Your centralized clipboard vault for snippets, links, and seamless sharing.
+                            A modern workspace for your snippets, links, tasks, and secrets. 
+                            Private by default, powerful by design.
                         </p>
                     </div>
 
                     <div className="grid gap-8">
                         <section className="space-y-4">
-                            <h2 className="text-2xl font-semibold">Features</h2>
-                            <div className="grid sm:grid-cols-2 gap-4 border rounded-lg p-6 bg-card">
+                            <h2 className="text-2xl font-semibold">Stores & Features</h2>
+                            <div className="border rounded-xl p-8 bg-card shadow-sm">
                                 <FeaturesList />
                             </div>
                         </section>
