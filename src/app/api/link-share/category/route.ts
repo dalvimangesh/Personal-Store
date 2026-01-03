@@ -63,6 +63,7 @@ export async function PUT(request: Request) {
     // Update fields
     targetCategory.name = encryptedName;
     targetCategory.items = encryptedItems;
+    targetCategory.isHidden = category.isHidden || false;
     // Preserve sharedWith from DB to prevent overwrite by shared user
     // (Owner updates to sharedWith should go through share endpoint or be carefully handled here)
     

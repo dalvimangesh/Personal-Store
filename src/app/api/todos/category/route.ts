@@ -96,6 +96,7 @@ export async function PUT(request: Request) {
 
     targetCategory.name = encryptedName;
     targetCategory.items = encryptedItems;
+    targetCategory.isHidden = category.isHidden;
     
     todoStore.categories[categoryIndex] = targetCategory;
     

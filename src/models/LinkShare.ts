@@ -9,6 +9,7 @@ export interface ILinkCategory {
   _id?: string;
   name: string;
   items: ILinkItem[];
+  isHidden?: boolean;
 }
 
 export interface ILinkShare extends Document {
@@ -28,7 +29,8 @@ const LinkCategorySchema = new Schema({
   items: [LinkItemSchema],
   sharedWith: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   isPublic: { type: Boolean, default: false },
-  publicToken: { type: String }
+  publicToken: { type: String },
+  isHidden: { type: Boolean, default: false }
 });
 
 const LinkShareSchema: Schema = new Schema(

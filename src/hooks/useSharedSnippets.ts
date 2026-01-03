@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { SharedSnippet } from '@/types';
 
 export function useSharedSnippets() {
@@ -6,11 +6,7 @@ export function useSharedSnippets() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchSnippets();
-  }, []);
-
-  const fetchSnippets = async () => {
+  const fetchSnippets = useCallback(async () => {
     try {
       setIsLoading(true);
       const res = await fetch('/api/shared-snippets');
@@ -23,9 +19,13 @@ export function useSharedSnippets() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const addSnippet = async (snippet: Omit<SharedSnippet, 'id' | 'createdAt'>) => {
+  useEffect(() => {
+    fetchSnippets();
+  }, [fetchSnippets]);
+
+  const addSnippet = useCallback(async (snippet: Omit<SharedSnippet, 'id' | 'createdAt'>) => {
     try {
       const res = await fetch('/api/shared-snippets', {
         method: 'POST',
@@ -45,9 +45,9 @@ export function useSharedSnippets() {
       console.error('Failed to add shared snippet:', error);
       return false;
     }
-  };
+  }, []);
 
-  const updateSnippet = async (id: string, updatedData: Partial<Omit<SharedSnippet, 'id' | 'createdAt'>>) => {
+  const updateSnippet = useCallback(async (id: string, updatedData: Partial<Omit<SharedSnippet, 'id' | 'createdAt'>>) => {
     try {
       const res = await fetch(`/api/shared-snippets/${id}`, {
         method: 'PUT',
@@ -71,9 +71,9 @@ export function useSharedSnippets() {
       console.error('Failed to update shared snippet:', error);
       return false;
     }
-  };
+  }, []);
 
-  const deleteSnippet = async (id: string) => {
+  const deleteSnippet = useCallback(async (id: string) => {
     try {
       const res = await fetch(`/api/shared-snippets/${id}`, {
         method: 'DELETE',
@@ -89,16 +89,19 @@ export function useSharedSnippets() {
       console.error('Failed to delete shared snippet:', error);
       return false;
     }
-  };
+  }, []);
 
-  const filteredSnippets = snippets.filter((snippet) => {
+  const filteredSnippets = useMemo(() => {
+    if (!searchQuery.trim()) return snippets;
     const query = searchQuery.toLowerCase();
-    return (
-      snippet.title.toLowerCase().includes(query) ||
-      snippet.content.toLowerCase().includes(query) ||
-      snippet.tags.some((tag) => tag.toLowerCase().includes(query))
-    );
-  });
+    return snippets.filter((snippet) => {
+      return (
+        snippet.title.toLowerCase().includes(query) ||
+        snippet.content.toLowerCase().includes(query) ||
+        snippet.tags.some((tag) => tag.toLowerCase().includes(query))
+      );
+    });
+  }, [snippets, searchQuery]);
 
   return {
     snippets: filteredSnippets,

@@ -47,6 +47,7 @@ export async function PUT(
         goalValue: habit.goalValue,
         goalUnit: habit.goalUnit ? decrypt(habit.goalUnit) : undefined,
         frequency: habit.frequency,
+        isHidden: habit.isHidden,
         createdAt: habit.createdAt,
         updatedAt: habit.updatedAt,
       }

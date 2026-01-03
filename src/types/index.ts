@@ -4,6 +4,7 @@ export interface Snippet {
   content: string;
   tags: string[];
   isHidden?: boolean;
+  isHiding?: boolean;
   createdAt: Date;
 }
 
@@ -47,6 +48,7 @@ export interface TodoCategory {
   sharedWith?: { userId: string; username: string }[];
   isPublic?: boolean;
   publicToken?: string;
+  isHidden?: boolean;
 }
 
 export interface Habit {
@@ -56,6 +58,7 @@ export interface Habit {
   goalValue?: number;
   goalUnit?: string;
   frequency: 'daily' | 'weekly';
+  isHidden?: boolean;
   createdAt: Date;
   updatedAt: Date;
   logs?: HabitLog[];

@@ -6,6 +6,7 @@ export interface IHabit extends Document {
   goalValue?: number;
   goalUnit?: string;
   frequency: 'daily' | 'weekly';
+  isHidden: boolean;
   userId: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -22,6 +23,7 @@ const HabitSchema: Schema = new Schema(
       enum: ['daily', 'weekly'], 
       default: 'daily' 
     },
+    isHidden: { type: Boolean, default: false },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   {

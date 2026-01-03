@@ -1,10 +1,10 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Flame, Trash2, CheckCircle2, ChevronDown, ChevronUp, History, Target, Loader2, Activity, TrendingUp } from "lucide-react";
+import { Plus, Flame, Trash2, CheckCircle2, ChevronDown, ChevronUp, History, Target, Loader2, Activity, TrendingUp, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { format, subDays, isSameDay, parseISO, startOfDay } from "date-fns";
 import { useHabits } from "@/hooks/useHabits";
@@ -19,9 +19,10 @@ import {
 interface HabitStoreProps {
   searchQuery?: string;
   isPrivacyMode?: boolean;
+  showHiddenMaster?: boolean;
 }
 
-function HabitLineGraph({ logs, days = 147 }: { logs: HabitLog[] | undefined, days?: number }) {
+const HabitLineGraph = memo(function HabitLineGraph({ logs, days = 147 }: { logs: HabitLog[] | undefined, days?: number }) {
   const recentDays = useMemo(() => {
     return Array.from({ length: days }).map((_, i) => subDays(new Date(), i)).reverse();
   }, [days]);
@@ -40,11 +41,11 @@ function HabitLineGraph({ logs, days = 147 }: { logs: HabitLog[] | undefined, da
   const paddingX = 10;
   const paddingY = 10;
 
-  const points = data.map((val, i) => {
+  const points = useMemo(() => data.map((val, i) => {
     const x = (i / (days - 1)) * (width - 2 * paddingX) + paddingX;
     const y = height - paddingY - (val / maxValue) * (height - 2 * paddingY);
     return `${x},${y}`;
-  }).join(" ");
+  }).join(" "), [data, days]);
 
   return (
     <div className="w-full h-[100px] mt-2 bg-muted/20 rounded-lg p-3 border border-muted/30 relative group/graph overflow-hidden">
@@ -110,10 +111,10 @@ function HabitLineGraph({ logs, days = 147 }: { logs: HabitLog[] | undefined, da
         </div>
     </div>
   );
-}
+});
 
-export function HabitStore({ searchQuery = "", isPrivacyMode = false }: HabitStoreProps) {
-  const { habits, addHabit, deleteHabit, toggleHabitLog, isLoading, setSearchQuery } = useHabits();
+export function HabitStore({ searchQuery = "", isPrivacyMode = false, showHiddenMaster = false }: HabitStoreProps) {
+  const { habits, addHabit, deleteHabit, toggleHabitLog, updateHabit, isLoading, setSearchQuery } = useHabits();
   
   // Sync search query
   useEffect(() => {
@@ -149,7 +150,7 @@ export function HabitStore({ searchQuery = "", isPrivacyMode = false }: HabitSto
     }
   };
 
-  const calculateStreak = (logs: HabitLog[] | undefined) => {
+  const calculateStreak = useCallback((logs: HabitLog[] | undefined) => {
     if (!logs || logs.length === 0) return 0;
     
     const sortedLogs = [...logs]
@@ -180,11 +181,13 @@ export function HabitStore({ searchQuery = "", isPrivacyMode = false }: HabitSto
     }
     
     return streak;
-  };
+  }, []);
 
-  const getRecentDays = (days = 14) => {
+  const getRecentDays = useCallback((days = 14) => {
     return Array.from({ length: days }).map((_, i) => subDays(new Date(), i)).reverse();
-  };
+  }, []);
+
+  const recentDays = useMemo(() => getRecentDays(147), [getRecentDays]);
 
   if (isLoading) {
     return (
@@ -274,182 +277,19 @@ export function HabitStore({ searchQuery = "", isPrivacyMode = false }: HabitSto
           </div>
         ) : (
           habits.map((habit) => {
-            const streak = calculateStreak(habit.logs);
-            const todayDate = format(new Date(), "yyyy-MM-dd");
-            const isDoneToday = habit.logs?.some(l => l.date === todayDate && l.completed);
-            const recentDays = getRecentDays(147); // 21 weeks of data
+            if (!showHiddenMaster && habit.isHidden) return null;
 
             return (
-              <Card key={habit.id} className={cn(
-                "group relative overflow-hidden transition-all hover:shadow-md",
-                isDoneToday ? "bg-green-50/30 dark:bg-green-900/10 border-green-200 dark:border-green-800" : "bg-card"
-              )}>
-                <CardContent className="p-3 sm:p-4 flex flex-col lg:flex-row items-stretch gap-4">
-                    {/* Left: Info */}
-                    <div className="flex-none min-w-0 w-full lg:w-[280px] flex flex-col justify-center">
-                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                             <h3 className={cn(
-                                "font-bold text-lg break-words",
-                                isPrivacyMode && "blur-sm"
-                            )}>
-                                {habit.title}
-                            </h3>
-                            {streak > 0 && (
-                                <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 gap-1 border-orange-200 dark:border-orange-800 h-5 px-1.5 text-[10px] shrink-0">
-                                    <Flame className="h-3 w-3 fill-current" />
-                                    {streak}
-                                </Badge>
-                            )}
-                        </div>
-                        {habit.description && (
-                            <p className={cn(
-                                "text-xs text-muted-foreground mb-3 leading-snug whitespace-pre-wrap break-words",
-                                isPrivacyMode && "blur-sm"
-                            )}>
-                                {habit.description}
-                            </p>
-                        )}
-                        {habit.goalValue && (
-                            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground bg-muted/50 w-fit px-2 py-1 rounded border shadow-sm">
-                                <Target className="h-3 w-3 text-primary/70" />
-                                {habit.goalValue} {habit.goalUnit}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Middle: Progress Grid & Graph */}
-                    <div className="flex-1 w-full flex flex-col items-start justify-center py-2 border-t lg:border-t-0 lg:border-l lg:pl-4 min-h-[180px]">
-                        <div className="w-full flex items-center justify-between text-[9px] text-muted-foreground uppercase tracking-widest font-bold mb-2">
-                            <span className="flex items-center gap-1.5 text-primary/80"><Activity className="h-3 w-3" /> Consistency</span>
-                            <span className="opacity-60">Last 147 Days</span>
-                        </div>
-                        
-                        <HabitLineGraph logs={habit.logs} days={147} />
-
-                        <div className="mt-3 w-full">
-                             <div className="flex items-center gap-2 text-[9px] text-muted-foreground mb-1 font-semibold uppercase tracking-tighter opacity-70">
-                                <History className="h-2.5 w-2.5" /> Full History (Last 147 Days)
-                            </div>
-                            <div className="flex flex-wrap gap-1 w-full">
-                                {recentDays.map((day) => {
-                                    const dateStr = format(day, "yyyy-MM-dd");
-                                    const log = habit.logs?.find(l => l.date === dateStr);
-                                    const isCompleted = log?.completed;
-                                    const val = log?.value ?? 0;
-                                    const isToday = isSameDay(day, new Date());
-                                    const isPast = day < startOfDay(new Date());
-                                    
-                                    return (
-                                        <Popover key={dateStr}>
-                                            <PopoverTrigger asChild>
-                                                <div 
-                                                    className={cn(
-                                                        "h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-[1px] cursor-pointer transition-all hover:scale-125 hover:z-10",
-                                                        isCompleted ? "bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.3)]" : 
-                                                        (isPast ? "bg-red-500/20 border border-red-500/30" : "bg-muted border border-muted-foreground/10 hover:bg-muted-foreground/20"),
-                                                        isToday && !isCompleted && "ring-1 ring-primary ring-offset-1"
-                                                    )}
-                                                />
-                                            </PopoverTrigger>
-                                            <PopoverContent side="top" className="w-auto p-2 text-xs">
-                                                <div className="font-semibold">{format(day, "PPP")}</div>
-                                                <div className={cn(
-                                                    "font-medium flex items-center gap-2",
-                                                    isCompleted ? "text-green-600" : (isPast ? "text-red-500" : "text-muted-foreground")
-                                                )}>
-                                                    {isCompleted ? `Completed (Score: ${val})` : (isPast ? "Missed" : "Not completed yet")}
-                                                </div>
-                                                <div className="mt-2 space-y-2">
-                                                    {!isCompleted && (
-                                                        <div className="flex flex-wrap gap-1">
-                                                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(v => (
-                                                                <Button 
-                                                                    key={v}
-                                                                    size="icon" 
-                                                                    variant="outline" 
-                                                                    className="h-5 w-5 text-[9px]"
-                                                                    onClick={() => toggleHabitLog(habit.id, dateStr, true, v)}
-                                                                >
-                                                                    {v}
-                                                                </Button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                    <Button 
-                                                        size="sm" 
-                                                        variant="ghost" 
-                                                        className="h-6 w-full text-[10px] px-1"
-                                                        onClick={() => toggleHabitLog(habit.id, dateStr, !isCompleted, isCompleted ? undefined : 0)}
-                                                    >
-                                                        {isCompleted ? "Unmark" : "Mark as Done (0)"}
-                                                    </Button>
-                                                </div>
-                                            </PopoverContent>
-                                        </Popover>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right: Actions */}
-                    <div className="flex-none flex flex-col items-center gap-3 w-full lg:w-[200px] justify-center shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 self-center">
-                        <div className="w-full flex flex-col gap-2">
-                            {isDoneToday ? (
-                                <div className="flex flex-col gap-2 w-full">
-                                    <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-2">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] font-bold text-green-700 dark:text-green-400 uppercase">Today&apos;s Score</span>
-                                            <span className="text-xl font-black text-green-600 dark:text-green-500">
-                                                {habit.logs?.find(l => l.date === todayDate)?.value ?? 0}
-                                            </span>
-                                        </div>
-                                        <CheckCircle2 className="h-6 w-6 text-green-500 opacity-50" />
-                                    </div>
-                                    <Button 
-                                        size="sm" 
-                                        variant="ghost"
-                                        className="h-8 gap-2 text-xs text-muted-foreground hover:text-destructive transition-colors"
-                                        onClick={() => toggleHabitLog(habit.id, todayDate, false)}
-                                    >
-                                        <History className="h-3 w-3" /> Unmark Today
-                                    </Button>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col gap-2 w-full">
-                                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-center mb-1">
-                                        Mark Today&apos;s Progress
-                                    </div>
-                                    <div className="grid grid-cols-5 gap-1.5">
-                                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((val) => (
-                                            <Button
-                                                key={val}
-                                                size="sm"
-                                                variant="outline"
-                                                className="h-8 w-full text-xs font-bold hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all"
-                                                onClick={() => toggleHabitLog(habit.id, todayDate, true, val)}
-                                            >
-                                                {val}
-                                            </Button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                            
-                            <div className="flex items-center gap-2 mt-2 pt-2 border-t w-full justify-center">
-                                <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
-                                    onClick={() => deleteHabit(habit.id)}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-              </Card>
+              <HabitCard 
+                key={habit.id}
+                habit={habit}
+                isPrivacyMode={isPrivacyMode}
+                recentDays={recentDays}
+                toggleHabitLog={toggleHabitLog}
+                updateHabit={updateHabit}
+                deleteHabit={deleteHabit}
+                calculateStreak={calculateStreak}
+              />
             );
           })
         )}
@@ -457,4 +297,208 @@ export function HabitStore({ searchQuery = "", isPrivacyMode = false }: HabitSto
     </div>
   );
 }
+
+const HabitCard = memo(function HabitCard({ 
+    habit, 
+    isPrivacyMode, 
+    recentDays, 
+    toggleHabitLog, 
+    updateHabit, 
+    deleteHabit,
+    calculateStreak 
+}: { 
+    habit: Habit; 
+    isPrivacyMode: boolean; 
+    recentDays: Date[]; 
+    toggleHabitLog: (id: string, date: string, completed: boolean, value?: number) => void; 
+    updateHabit: (id: string, data: any) => void; 
+    deleteHabit: (id: string) => void;
+    calculateStreak: (logs: HabitLog[] | undefined) => number;
+}) {
+    const streak = calculateStreak(habit.logs);
+    const todayDate = format(new Date(), "yyyy-MM-dd");
+    const isDoneToday = habit.logs?.some(l => l.date === todayDate && l.completed);
+
+    return (
+        <Card className={cn(
+            "group relative overflow-hidden transition-all hover:shadow-md",
+            isDoneToday ? "bg-green-50/30 dark:bg-green-900/10 border-green-200 dark:border-green-800" : "bg-card"
+        )}>
+            <CardContent className="p-3 sm:p-4 flex flex-col lg:flex-row items-stretch gap-4">
+                {/* Left: Info */}
+                <div className="flex-none min-w-0 w-full lg:w-[280px] flex flex-col justify-center">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <h3 className={cn(
+                            "font-bold text-lg break-words",
+                            isPrivacyMode && "blur-sm"
+                        )}>
+                            {habit.title}
+                        </h3>
+                        {streak > 0 && (
+                            <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 gap-1 border-orange-200 dark:border-orange-800 h-5 px-1.5 text-[10px] shrink-0">
+                                <Flame className="h-3 w-3 fill-current" />
+                                {streak}
+                            </Badge>
+                        )}
+                    </div>
+                    {habit.description && (
+                        <p className={cn(
+                            "text-xs text-muted-foreground mb-3 leading-snug whitespace-pre-wrap break-words",
+                            isPrivacyMode && "blur-sm"
+                        )}>
+                            {habit.description}
+                        </p>
+                    )}
+                    {habit.goalValue && (
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground bg-muted/50 w-fit px-2 py-1 rounded border shadow-sm">
+                            <Target className="h-3 w-3 text-primary/70" />
+                            {habit.goalValue} {habit.goalUnit}
+                        </div>
+                    )}
+                </div>
+
+                {/* Middle: Progress Grid & Graph */}
+                <div className="flex-1 w-full flex flex-col items-start justify-center py-2 border-t lg:border-t-0 lg:border-l lg:pl-4 min-h-[180px]">
+                    <div className="w-full flex items-center justify-between text-[9px] text-muted-foreground uppercase tracking-widest font-bold mb-2">
+                        <span className="flex items-center gap-1.5 text-primary/80"><Activity className="h-3 w-3" /> Consistency</span>
+                        <span className="opacity-60">Last 147 Days</span>
+                    </div>
+                    
+                    <HabitLineGraph logs={habit.logs} days={147} />
+
+                    <div className="mt-3 w-full">
+                        <div className="flex items-center gap-2 text-[9px] text-muted-foreground mb-1 font-semibold uppercase tracking-tighter opacity-70">
+                            <History className="h-2.5 w-2.5" /> Full History (Last 147 Days)
+                        </div>
+                        <div className="flex flex-wrap gap-1 w-full">
+                            {recentDays.map((day) => {
+                                const dateStr = format(day, "yyyy-MM-dd");
+                                const log = habit.logs?.find(l => l.date === dateStr);
+                                const isCompleted = log?.completed;
+                                const val = log?.value ?? 0;
+                                const isToday = isSameDay(day, new Date());
+                                const isPast = day < startOfDay(new Date());
+                                
+                                return (
+                                    <Popover key={dateStr}>
+                                        <PopoverTrigger asChild>
+                                            <div 
+                                                className={cn(
+                                                    "h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-[1px] cursor-pointer transition-all hover:scale-125 hover:z-10",
+                                                    isCompleted ? "bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.3)]" : 
+                                                    (isPast ? "bg-red-500/20 border border-red-500/30" : "bg-muted border border-muted-foreground/10 hover:bg-muted-foreground/20"),
+                                                    isToday && !isCompleted && "ring-1 ring-primary ring-offset-1"
+                                                )}
+                                            />
+                                        </PopoverTrigger>
+                                        <PopoverContent side="top" className="w-auto p-2 text-xs">
+                                            <div className="font-semibold">{format(day, "PPP")}</div>
+                                            <div className={cn(
+                                                "font-medium flex items-center gap-2",
+                                                isCompleted ? "text-green-600" : (isPast ? "text-red-500" : "text-muted-foreground")
+                                            )}>
+                                                {isCompleted ? `Completed (Score: ${val})` : (isPast ? "Missed" : "Not completed yet")}
+                                            </div>
+                                            <div className="mt-2 space-y-2">
+                                                {!isCompleted && (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(v => (
+                                                            <Button 
+                                                                key={v}
+                                                                size="icon" 
+                                                                variant="outline" 
+                                                                className="h-5 w-5 text-[9px]"
+                                                                onClick={() => toggleHabitLog(habit.id, dateStr, true, v)}
+                                                            >
+                                                                {v}
+                                                            </Button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="ghost" 
+                                                    className="h-6 w-full text-[10px] px-1"
+                                                    onClick={() => toggleHabitLog(habit.id, dateStr, !isCompleted, isCompleted ? undefined : 0)}
+                                                >
+                                                    {isCompleted ? "Unmark" : "Mark as Done (0)"}
+                                                </Button>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right: Actions */}
+                <div className="flex-none flex flex-col items-center gap-3 w-full lg:w-[200px] justify-center shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 self-center">
+                    <div className="w-full flex flex-col gap-2">
+                        {isDoneToday ? (
+                            <div className="flex flex-col gap-2 w-full">
+                                <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-2">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-bold text-green-700 dark:text-green-400 uppercase">Today&apos;s Score</span>
+                                        <span className="text-xl font-black text-green-600 dark:text-green-500">
+                                            {habit.logs?.find(l => l.date === todayDate)?.value ?? 0}
+                                        </span>
+                                    </div>
+                                    <CheckCircle2 className="h-6 w-6 text-green-500 opacity-50" />
+                                </div>
+                                <Button 
+                                    size="sm" 
+                                    variant="ghost"
+                                    className="h-8 gap-2 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                                    onClick={() => toggleHabitLog(habit.id, todayDate, false)}
+                                >
+                                    <History className="h-3 w-3" /> Unmark Today
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-2 w-full">
+                                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-center mb-1">
+                                    Mark Today&apos;s Progress
+                                </div>
+                                <div className="grid grid-cols-5 gap-1.5">
+                                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((val) => (
+                                        <Button
+                                            key={val}
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-8 w-full text-xs font-bold hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all"
+                                            onClick={() => toggleHabitLog(habit.id, todayDate, true, val)}
+                                        >
+                                            {val}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        
+                        <div className="flex items-center gap-2 mt-2 pt-2 border-t w-full justify-center">
+                            <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-8 w-8 text-muted-foreground hover:text-blue-500 transition-colors shrink-0"
+                                onClick={() => updateHabit(habit.id, { isHidden: !habit.isHidden })}
+                                title={habit.isHidden ? "Show Habit" : "Hide Habit"}
+                            >
+                                {habit.isHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                            <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                                onClick={() => deleteHabit(habit.id)}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+});
 

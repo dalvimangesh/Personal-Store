@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Plus, X, ExternalLink, MoreVertical, Trash2, Edit2, Layout, Settings, Loader2 } from 'lucide-react';
+import { useState, useEffect, useCallback, memo, useMemo } from 'react';
+import { Plus, X, ExternalLink, MoreVertical, Trash2, Edit2, Layout, Settings, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,14 +55,16 @@ interface TrackerColumnType {
 interface TrackerBoardType {
   id: string;
   title: string;
+  isHidden?: boolean;
   createdAt: Date;
 }
 
 interface TrackerStoreProps {
   isPrivacyMode: boolean;
+  showHiddenMaster?: boolean;
 }
 
-export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
+export function TrackerStore({ isPrivacyMode, showHiddenMaster = false }: TrackerStoreProps) {
   const [boards, setBoards] = useState<TrackerBoardType[]>([]);
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
   const [columns, setColumns] = useState<TrackerColumnType[]>([]);
@@ -90,41 +93,7 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
     })
   );
 
-  useEffect(() => {
-    fetchBoards();
-  }, []);
-
-  useEffect(() => {
-    if (activeBoardId) {
-      fetchData(activeBoardId);
-    }
-  }, [activeBoardId]);
-
-  const fetchBoards = async () => {
-    try {
-      const res = await fetch('/api/tracker/boards');
-      const json = await res.json();
-      if (json.success) {
-        setBoards(json.data);
-        if (json.data.length > 0 && !activeBoardId) {
-            // Try to restore from localStorage or pick first
-            const savedId = localStorage.getItem('tracker_active_board');
-            if (savedId && json.data.find((b: TrackerBoardType) => b.id === savedId)) {
-                setActiveBoardId(savedId);
-            } else {
-                setActiveBoardId(json.data[0].id);
-            }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch boards', error);
-      toast.error('Failed to load boards');
-    } finally {
-      setIsBoardLoading(false);
-    }
-  };
-
-  const fetchData = async (boardId: string) => {
+  const fetchData = useCallback(async (boardId: string) => {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/tracker?boardId=${boardId}`);
@@ -139,7 +108,78 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  const fetchBoards = useCallback(async () => {
+    try {
+      const res = await fetch('/api/tracker/boards');
+      const json = await res.json();
+      if (json.success) {
+        setBoards(json.data);
+        if (json.data.length > 0) {
+            // Try to restore from localStorage or pick first visible
+            const savedId = localStorage.getItem('tracker_active_board');
+            const visibleBoards = json.data.filter((b: TrackerBoardType) => showHiddenMaster || !b.isHidden);
+            
+            let targetId = null;
+            if (savedId && json.data.find((b: TrackerBoardType) => b.id === savedId)) {
+                // If saved board is hidden and showHiddenMaster is false, find another one
+                const board = json.data.find((b: TrackerBoardType) => b.id === savedId);
+                if (!showHiddenMaster && board?.isHidden) {
+                    if (visibleBoards.length > 0) targetId = visibleBoards[0].id;
+                } else {
+                    targetId = savedId;
+                }
+            } else if (visibleBoards.length > 0) {
+                targetId = visibleBoards[0].id;
+            }
+
+            if (targetId) {
+                setActiveBoardId(targetId);
+            } else {
+                setIsLoading(false); // No board to show
+            }
+        } else {
+            setIsLoading(false); // No boards at all
+        }
+      } else {
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Failed to fetch boards', error);
+      toast.error('Failed to load boards');
+      setIsLoading(false);
+    } finally {
+      setIsBoardLoading(false);
+    }
+  }, [showHiddenMaster]);
+
+  useEffect(() => {
+    fetchBoards();
+  }, [fetchBoards]);
+
+  useEffect(() => {
+    if (activeBoardId) {
+      fetchData(activeBoardId);
+    } else {
+      setColumns([]);
+      setCards([]);
+    }
+  }, [activeBoardId, fetchData]);
+
+  // Handle case where active board becomes hidden due to master toggle
+  useEffect(() => {
+    if (!showHiddenMaster && activeBoardId && boards.length > 0) {
+      const activeBoard = boards.find(b => b.id === activeBoardId);
+      if (activeBoard?.isHidden) {
+        const visibleBoards = boards.filter(b => !b.isHidden);
+        if (visibleBoards.length > 0) {
+          setActiveBoardId(visibleBoards[0].id);
+          localStorage.setItem('tracker_active_board', visibleBoards[0].id);
+        }
+      }
+    }
+  }, [showHiddenMaster, activeBoardId, boards]);
 
   const handleCreateBoard = async () => {
     if (!newBoardTitle.trim()) return;
@@ -181,8 +221,10 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
               setBoards(newBoards);
               if (activeBoardId === id) {
                   if (newBoards.length > 0) {
-                      setActiveBoardId(newBoards[0].id);
-                      localStorage.setItem('tracker_active_board', newBoards[0].id);
+                      const visibleBoards = newBoards.filter(b => showHiddenMaster || !b.isHidden);
+                      const nextBoard = visibleBoards.length > 0 ? visibleBoards[0] : newBoards[0];
+                      setActiveBoardId(nextBoard.id);
+                      localStorage.setItem('tracker_active_board', nextBoard.id);
                   } else {
                       setActiveBoardId(null); // Should handle empty state or recreate default
                       fetchBoards(); // Will recreate default
@@ -220,6 +262,26 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
       }
   };
 
+  const handleToggleHideBoard = async (board: TrackerBoardType) => {
+    try {
+        const res = await fetch(`/api/tracker/boards/${board.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isHidden: !board.isHidden }),
+        });
+        const json = await res.json();
+
+        if (json.success) {
+            setBoards(boards.map(b => b.id === board.id ? { ...b, isHidden: !board.isHidden } : b));
+            toast.success(board.isHidden ? 'Board visible' : 'Board hidden');
+        } else {
+            toast.error(json.error || 'Failed to update board');
+        }
+    } catch (error) {
+        toast.error('Failed to update board');
+    }
+  };
+
 
   const handleAddColumn = async () => {
     if (!newColumnTitle.trim() || !activeBoardId) return;
@@ -245,7 +307,7 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
     }
   };
 
-  const handleDeleteColumn = async (id: string) => {
+  const handleDeleteColumn = useCallback(async (id: string) => {
     if (!confirm('Are you sure? This will delete all cards in this column.')) return;
 
     try {
@@ -255,8 +317,8 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
       const json = await res.json();
       
       if (json.success) {
-        setColumns(columns.filter(c => c.id !== id));
-        setCards(cards.filter(c => c.columnId !== id));
+        setColumns(prev => prev.filter(c => c.id !== id));
+        setCards(prev => prev.filter(c => c.columnId !== id));
         toast.success('Column deleted');
       } else {
         toast.error(json.error || 'Failed to delete column');
@@ -264,9 +326,9 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
     } catch (error) {
       toast.error('Failed to delete column');
     }
-  };
+  }, []);
 
-  const handleAddCard = async (columnId: string, data: { title: string; description?: string; link?: string }) => {
+  const handleAddCard = useCallback(async (columnId: string, data: { title: string; description?: string; link?: string }) => {
     try {
       const res = await fetch('/api/tracker/cards', {
         method: 'POST',
@@ -276,7 +338,7 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
       const json = await res.json();
       
       if (json.success) {
-        setCards([...cards, json.data]);
+        setCards(prev => [...prev, json.data]);
         toast.success('Card added');
       } else {
         toast.error(json.error || 'Failed to add card');
@@ -284,9 +346,9 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
     } catch (error) {
       toast.error('Failed to add card');
     }
-  };
+  }, []);
 
-  const handleDeleteCard = async (id: string) => {
+  const handleDeleteCard = useCallback(async (id: string) => {
     try {
       const res = await fetch(`/api/tracker/cards/${id}`, {
         method: 'DELETE',
@@ -294,7 +356,7 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
       const json = await res.json();
       
       if (json.success) {
-        setCards(cards.filter(c => c.id !== id));
+        setCards(prev => prev.filter(c => c.id !== id));
         toast.success('Card deleted');
       } else {
         toast.error(json.error || 'Failed to delete card');
@@ -302,12 +364,11 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
     } catch (error) {
       toast.error('Failed to delete card');
     }
-  };
+  }, []);
 
-    const handleUpdateCard = async (id: string, updates: Partial<TrackerCardType>) => {
+    const handleUpdateCard = useCallback(async (id: string, updates: Partial<TrackerCardType>) => {
         // Optimistic update
-        const originalCards = [...cards];
-        setCards(cards.map(c => c.id === id ? { ...c, ...updates } : c));
+        setCards(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
         setEditingCardId(null); // Close editor if open
 
         try {
@@ -319,28 +380,24 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
             const json = await res.json();
             
             if (!json.success) {
-                setCards(originalCards); // Revert
+                // Fetch again to sync with server on failure
+                if (activeBoardId) fetchData(activeBoardId);
                 toast.error(json.error || 'Failed to update card');
             }
         } catch (error) {
-            setCards(originalCards); // Revert
+            if (activeBoardId) fetchData(activeBoardId);
             toast.error('Failed to update card');
         }
-    }
-
-  const handleMoveCard = async (cardId: string, newColumnId: string) => {
-    if (!newColumnId) return;
-    handleUpdateCard(cardId, { columnId: newColumnId });
-  };
+    }, [activeBoardId, fetchData]);
 
   // Drag and Drop Handlers
-  const handleDragStart = (event: DragStartEvent) => {
+  const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event;
     const card = cards.find(c => c.id === active.id);
     if (card) setActiveCard(card);
-  };
+  }, [cards]);
 
-  const handleDragOver = (event: DragOverEvent) => {
+  const handleDragOver = useCallback((event: DragOverEvent) => {
     const { active, over } = event;
     if (!over) return;
 
@@ -361,22 +418,13 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
         const overCard = cards.find(c => c.id === overId);
 
         if (activeCard && overCard && activeCard.columnId !== overCard.columnId) {
-             setCards(prev => {
-                const activeItems = prev.filter(c => c.columnId === activeCard.columnId);
-                const overItems = prev.filter(c => c.columnId === overCard.columnId);
-                
-                const activeIndex = activeItems.findIndex(c => c.id === activeId);
-                const overIndex = overItems.findIndex(c => c.id === overId);
-
-                // We need to update the columnId immediately for the UI to reflect
-                // The actual reordering logic is handled more robustly in dragEnd, but this visual feedback is crucial
-                return prev.map(c => {
+             setCards(prev => prev.map(c => {
                     if (c.id === activeId) {
                         return { ...c, columnId: overCard.columnId };
                     }
                     return c;
-                });
-             })
+                })
+             )
         }
     }
 
@@ -391,9 +439,9 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
             }));
         }
     }
-  };
+  }, [cards]);
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     setActiveCard(null);
 
@@ -420,17 +468,16 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
                   // Moved to another column (and position)
                   handleUpdateCard(activeId, { columnId: overCard.columnId });
              } else {
-                  // Reordered in same column
-                  // For now, we just update local state, 
-                  // In a real app with 'order' field, you'd calculate new order index and save API
                   const oldIndex = cards.findIndex(c => c.id === activeId);
                   const newIndex = cards.findIndex(c => c.id === overId);
                   setCards(arrayMove(cards, oldIndex, newIndex));
-                  // Note: Persisting exact order index to DB is skipped for simplicity, but column change is saved
              }
          }
     }
-  };
+  }, [cards, handleUpdateCard]);
+
+  const activeBoard = useMemo(() => boards.find(b => b.id === activeBoardId), [boards, activeBoardId]);
+  const isBoardVisible = useMemo(() => activeBoard && (showHiddenMaster || !activeBoard.isHidden), [activeBoard, showHiddenMaster]);
 
   if (isBoardLoading) {
     return (
@@ -445,7 +492,9 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
         {/* Board Switcher */}
         <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2 overflow-x-auto max-w-[calc(100%-120px)] no-scrollbar">
-                {boards.map(board => (
+                {boards.map(board => {
+                    if (!showHiddenMaster && board.isHidden) return null;
+                    return (
                      <div key={board.id} className="group flex items-center gap-1">
                         <Button
                             variant={activeBoardId === board.id ? "secondary" : "ghost"}
@@ -454,7 +503,9 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
                                 setActiveBoardId(board.id);
                                 localStorage.setItem('tracker_active_board', board.id);
                             }}
-                            className="h-8 text-xs font-medium max-w-[150px]"
+                            className={cn(
+                                "h-8 text-xs font-medium max-w-[150px]"
+                            )}
                         >
                             <Layout className="w-3 h-3 mr-2 opacity-70 shrink-0" />
                             <span className={`truncate ${isPrivacyMode ? 'blur-sm hover:blur-none transition-all duration-300' : ''}`}>
@@ -471,6 +522,11 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
                                 <DropdownMenuItem onClick={() => setEditingBoard(board)}>
                                     <Edit2 className="mr-2 h-3 w-3" /> Rename
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleToggleHideBoard(board)}>
+                                    {board.isHidden ? <Eye className="mr-2 h-3 w-3" /> : <EyeOff className="mr-2 h-3 w-3" />}
+                                    {board.isHidden ? 'Show Board' : 'Hide Board'}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem 
                                     onClick={() => handleDeleteBoard(board.id)}
                                     className="text-destructive focus:text-destructive"
@@ -481,7 +537,7 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
                             </DropdownMenuContent>
                         </DropdownMenu>
                      </div>
-                ))}
+                )})}
                 <Button 
                     variant="ghost" 
                     size="sm" 
@@ -494,10 +550,15 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
         </div>
 
         {/* Board Content */}
-        {isLoading ? (
-             <div className="flex items-center justify-center h-full text-muted-foreground">
-                 <Loader2 className="h-8 w-8 animate-spin" />
-             </div>
+        {!isBoardVisible ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground opacity-50">
+                <Layout className="h-12 w-12 mb-2" />
+                <p className="text-sm">Select a board to view its content</p>
+            </div>
+        ) : isLoading ? (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
         ) : (
     <DndContext
       sensors={sensors}
@@ -511,7 +572,7 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
             <SortableColumn 
                 key={column.id} 
                 column={column} 
-                        columns={columns}
+                columns={columns}
                 cards={cards.filter(c => c.columnId === column.id)}
                 isPrivacyMode={isPrivacyMode}
                 onDeleteColumn={handleDeleteColumn}
@@ -621,7 +682,7 @@ export function TrackerStore({ isPrivacyMode }: TrackerStoreProps) {
 }
 
 // Wrapper component for Sortable Column
-function SortableColumn({ 
+const SortableColumn = memo(function SortableColumn({ 
     column, 
     columns,
     cards, 
@@ -705,9 +766,9 @@ function SortableColumn({
           </div>
         </div>
     );
-}
+});
 
-function SortableTrackerCard(props: any) {
+const SortableTrackerCard = memo(function SortableTrackerCard(props: any) {
     const {
         attributes,
         listeners,
@@ -734,7 +795,7 @@ function SortableTrackerCard(props: any) {
             <TrackerCard {...props} />
         </div>
     );
-}
+});
 
 
 function AddCardForm({ onAdd }: { onAdd: (data: { title: string; description?: string; link?: string }) => void }) {
@@ -832,7 +893,7 @@ function EditCardForm({ card, onSave, onCancel }: { card: TrackerCardType; onSav
   );
 }
 
-function TrackerCard({ 
+const TrackerCard = memo(function TrackerCard({ 
     card, 
     columns, 
     isPrivacyMode, 
@@ -912,4 +973,4 @@ function TrackerCard({
       </CardContent>
     </Card>
   );
-}
+});

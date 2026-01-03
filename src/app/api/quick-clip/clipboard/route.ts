@@ -54,6 +54,7 @@ export async function PUT(request: Request) {
 
     targetClipboard.name = encryptedName;
     targetClipboard.content = encryptedContent;
+    targetClipboard.isHidden = clipboard.isHidden;
     
     quickClip.clipboards[clipboardIndex] = targetClipboard;
     

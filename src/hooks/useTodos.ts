@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Todo, TodoCategory } from '@/types';
 
 export function useTodos() {
@@ -12,7 +12,7 @@ export function useTodos() {
     fetchCategories();
   }, []);
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       setIsLoading(true);
       const res = await fetch('/api/todos');
@@ -25,9 +25,9 @@ export function useTodos() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const saveCategories = async (newCategories: TodoCategory[]) => {
+  const saveCategories = useCallback(async (newCategories: TodoCategory[]) => {
     setIsSaving(true);
     try {
         const ownedCategories = newCategories.filter(c => c.isOwner !== false);
@@ -76,27 +76,27 @@ export function useTodos() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, []);
 
-  const debouncedSave = (newCategories: TodoCategory[]) => {
+  const debouncedSave = useCallback((newCategories: TodoCategory[]) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
     timeoutRef.current = setTimeout(() => {
       saveCategories(newCategories);
     }, 1000);
-  };
+  }, [saveCategories]);
 
-  const addCategory = () => {
+  const addCategory = useCallback(() => {
     const newCategories: TodoCategory[] = [
         ...categories,
         { name: "New Category", items: [], isOwner: true, sharedWith: [] }
     ];
     setCategories(newCategories);
     saveCategories(newCategories);
-  };
+  }, [categories, saveCategories]);
 
-  const deleteCategory = async (index: number) => {
+  const deleteCategory = useCallback(async (index: number) => {
       const catToDelete = categories[index];
       if (catToDelete.isOwner === false) {
           // Leave shared category
@@ -122,10 +122,10 @@ export function useTodos() {
       const newCategories = categories.filter((_, i) => i !== index);
       setCategories(newCategories);
       saveCategories(newCategories);
-  };
+  }, [categories, saveCategories]);
 
   // Add item to a specific category
-  const addTodo = async (categoryIndex: number, todo: Omit<Todo, 'id' | 'createdAt'>) => {
+  const addTodo = useCallback(async (categoryIndex: number, todo: Omit<Todo, 'id' | 'createdAt'>) => {
     const newCategories = [...categories];
     const newTodo = {
         ...todo,
@@ -141,9 +141,9 @@ export function useTodos() {
     setCategories(newCategories);
     saveCategories(newCategories);
     return true;
-  };
+  }, [categories, saveCategories]);
 
-  const updateTodo = async (categoryIndex: number, todoId: string, updatedData: Partial<Todo>) => {
+  const updateTodo = useCallback(async (categoryIndex: number, todoId: string, updatedData: Partial<Todo>) => {
     const newCategories = [...categories];
     newCategories[categoryIndex] = {
         ...newCategories[categoryIndex],
@@ -154,9 +154,9 @@ export function useTodos() {
     setCategories(newCategories);
     debouncedSave(newCategories);
     return true;
-  };
+  }, [categories, debouncedSave]);
 
-  const deleteTodo = async (categoryIndex: number, todoId: string) => {
+  const deleteTodo = useCallback(async (categoryIndex: number, todoId: string) => {
     const newCategories = [...categories];
     const todoToDelete = newCategories[categoryIndex].items.find(t => t.id === todoId);
     
@@ -176,21 +176,25 @@ export function useTodos() {
     setCategories(newCategories);
     saveCategories(newCategories);
     return true;
-  };
+  }, [categories, saveCategories]);
 
-  const filteredCategories = categories.map(cat => {
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) return categories;
+    
     const query = searchQuery.toLowerCase();
-    const matchesCategory = cat.name.toLowerCase().includes(query);
-    const filteredItems = cat.items.filter(item => 
-        item.title.toLowerCase().includes(query) || 
-        (item.description && item.description.toLowerCase().includes(query))
-    );
+    return categories.map(cat => {
+      const matchesCategory = cat.name.toLowerCase().includes(query);
+      const filteredItems = cat.items.filter(item => 
+          item.title.toLowerCase().includes(query) || 
+          (item.description && item.description.toLowerCase().includes(query))
+      );
 
-    if (matchesCategory || filteredItems.length > 0) {
-        return { ...cat, items: matchesCategory ? cat.items : filteredItems };
-    }
-    return null;
-  }).filter((c): c is TodoCategory => c !== null);
+      if (matchesCategory || filteredItems.length > 0) {
+          return { ...cat, items: matchesCategory ? cat.items : filteredItems };
+      }
+      return null;
+    }).filter((c): c is TodoCategory => c !== null);
+  }, [categories, searchQuery]);
 
   return {
     categories: filteredCategories,

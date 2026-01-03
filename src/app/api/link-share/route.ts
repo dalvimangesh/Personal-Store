@@ -58,6 +58,7 @@ export async function GET() {
             return {
                 ...catObj,
                 name: decrypt(catObj.name),
+                isHidden: catObj.isHidden || false,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 items: (catObj.items || []).map((item: any) => ({
                     ...item,
@@ -109,6 +110,7 @@ export async function GET() {
             return {
                 ...catObj,
                 name: decrypt(catObj.name),
+                isHidden: catObj.isHidden || false,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 items: (catObj.items || []).map((item: any) => ({
                     ...item,
@@ -243,6 +245,7 @@ export async function POST(request: Request) {
     const encryptedCategories = ownedCategories.map((cat: any) => ({
         ...cat,
         name: encrypt(cat.name),
+        isHidden: cat.isHidden || false,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         items: (cat.items || []).map((item: any) => ({
             ...item,
