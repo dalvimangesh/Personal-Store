@@ -72,6 +72,7 @@ export async function GET() {
             return {
                 ...catObj,
                 name: decrypt(catObj.name),
+                isHidden: catObj.isHidden || false,
                 items: (catObj.items || []).map((item: any) => ({
                     ...item,
                     title: decrypt(item.title),
@@ -104,6 +105,7 @@ export async function GET() {
                 allCategories.push({
                     ...catObj,
                     name: decrypt(catObj.name),
+                    isHidden: catObj.isHidden || false,
                     items: (catObj.items || []).map((item: any) => ({
                         ...item,
                         title: decrypt(item.title),
@@ -187,6 +189,7 @@ export async function POST(request: Request) {
         const encryptedCategories = ownedCategories.map((cat: any) => ({
             ...cat,
             name: encrypt(cat.name),
+            isHidden: cat.isHidden || false,
             items: (cat.items || []).map((item: any) => {
                 const itemData = {
                     ...item,
@@ -225,6 +228,7 @@ export async function POST(request: Request) {
              return {
                  ...catObj,
                  name: decrypt(catObj.name),
+                 isHidden: catObj.isHidden || false,
                  items: (catObj.items || []).map((item: any) => ({
                      ...item,
                      title: decrypt(item.title),

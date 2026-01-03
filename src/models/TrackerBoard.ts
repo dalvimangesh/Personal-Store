@@ -12,6 +12,10 @@ const TrackerBoardSchema = new mongoose.Schema({
     trim: true,
     default: 'Main Board'
   },
+  isHidden: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now,

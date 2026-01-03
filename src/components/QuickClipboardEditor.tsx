@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo, useCallback } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, Plus, X, Users, Shield, LogOut, UserPlus, UserMinus, Globe, Copy, ExternalLink } from "lucide-react";
+import { Loader2, Plus, X, Users, Shield, LogOut, UserPlus, UserMinus, Globe, Copy, ExternalLink, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
     Dialog,
@@ -24,6 +24,7 @@ interface Clipboard {
   _id?: string;
   name: string;
   content: string;
+  isHidden?: boolean;
   isOwner?: boolean;
   ownerId?: string;
   ownerUsername?: string;
@@ -32,7 +33,7 @@ interface Clipboard {
   publicToken?: string;
 }
 
-export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?: boolean }) {
+export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster = false }: { isPrivacyMode?: boolean, showHiddenMaster?: boolean }) {
   const [clipboards, setClipboards] = useState<Clipboard[]>([]);
   const [activeTab, setActiveTab] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,6 +54,12 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
         if (res.ok) {
             if (data.data.clipboards && data.data.clipboards.length > 0) {
                 setClipboards(data.data.clipboards);
+                
+                // Find first visible tab if activeTab is not set or points to hidden
+                if (!showHiddenMaster) {
+                    const firstVisible = data.data.clipboards.findIndex((c: Clipboard) => !c.isHidden);
+                    if (firstVisible !== -1) setActiveTab(firstVisible);
+                }
             } else {
                 // Fallback/Default
                 setClipboards([{ name: "Main", content: "", isOwner: true }]);
@@ -69,9 +76,9 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
     };
 
     fetchContent();
-  }, []);
+  }, [showHiddenMaster]);
 
-  const saveClipboards = async (newClipboards: Clipboard[], specificIndex?: number) => {
+  const saveClipboards = useCallback(async (newClipboards: Clipboard[], specificIndex?: number) => {
     setIsSaving(true);
     try {
         // If specific index provided, optimize for single clipboard update (especially for shared ones)
@@ -87,7 +94,8 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
                         ownerId: targetClip.ownerId,
                         clipboard: {
                             name: targetClip.name,
-                            content: targetClip.content
+                            content: targetClip.content,
+                            isHidden: targetClip.isHidden
                         }
                     }),
                 });
@@ -98,7 +106,6 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
         }
 
       // Default: save all owned clipboards
-      // (Note: ideally we should only save changed ones, but bulk save is simpler for now)
       const ownedClipboards = newClipboards.filter(c => c.isOwner !== false);
       
       const res = await fetch("/api/quick-clip", {
@@ -116,82 +123,132 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
     } finally {
       setIsSaving(false);
     }
-  };
+  }, []);
 
-  const debouncedSave = (newClipboards: Clipboard[], changedIndex?: number) => {
+  const debouncedSave = useCallback((newClipboards: Clipboard[], changedIndex?: number) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
     timeoutRef.current = setTimeout(() => {
         saveClipboards(newClipboards, changedIndex);
     }, 1000);
-  };
+  }, [saveClipboards]);
 
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
-    const newClipboards = [...clipboards];
-    newClipboards[activeTab] = { ...newClipboards[activeTab], content: newContent };
-    
-    setClipboards(newClipboards);
-    setIsSaving(true); // Show saving immediately
-    debouncedSave(newClipboards, activeTab);
-  };
+    setClipboards(prev => {
+        const newClipboards = [...prev];
+        newClipboards[activeTab] = { ...newClipboards[activeTab], content: newContent };
+        setIsSaving(true);
+        debouncedSave(newClipboards, activeTab);
+        return newClipboards;
+    });
+  }, [activeTab, debouncedSave]);
 
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
-    const newName = e.target.value;
-    const newClipboards = [...clipboards];
-    newClipboards[index] = { ...newClipboards[index], name: newName };
-    
-    setClipboards(newClipboards);
-    debouncedSave(newClipboards, index);
-  };
+  const handleNameChange = useCallback((newName: string, index: number) => {
+    setClipboards(prev => {
+        const newClipboards = [...prev];
+        newClipboards[index] = { ...newClipboards[index], name: newName };
+        debouncedSave(newClipboards, index);
+        return newClipboards;
+    });
+  }, [debouncedSave]);
 
-  const handleAddClipboard = async () => {
-    const newClipboards = [...clipboards, { name: "New Clipboard", content: "", isOwner: true, sharedWith: [] }];
-    setClipboards(newClipboards);
-    const newIndex = newClipboards.length - 1;
-    setActiveTab(newIndex); 
-    
-    // Wait for save to complete to get the new ID
-    await saveClipboards(newClipboards);
-    
-    // Refetch to get the _id of the new clipboard so the share button works immediately
-    const fetchRes = await fetch("/api/quick-clip?t=" + Date.now());
-    if (fetchRes.ok) {
-        const d = await fetchRes.json();
-        // Keep the user on the newly created tab index
-        setClipboards(d.data.clipboards);
-    }
-  };
+  const handleAddClipboard = useCallback(async () => {
+    setClipboards(prev => {
+        const newClipboards = [...prev, { name: "New Clipboard", content: "", isOwner: true, sharedWith: [] }];
+        const newIndex = newClipboards.length - 1;
+        setActiveTab(newIndex); 
+        
+        saveClipboards(newClipboards).then(() => {
+             // Refetch to get the _id of the new clipboard so the share button works immediately
+             fetch("/api/quick-clip?t=" + Date.now()).then(res => {
+                if (res.ok) {
+                    res.json().then(d => {
+                        setClipboards(d.data.clipboards);
+                    });
+                }
+             });
+        });
+        
+        return newClipboards;
+    });
+  }, [saveClipboards]);
 
-  const handleDeleteClipboard = (e: React.MouseEvent, index: number) => {
-    e.stopPropagation(); // Prevent tab switching
-    
-    const clipToDelete = clipboards[index];
-    
-    if (clipToDelete.isOwner === false) {
-        // Leave shared clipboard
-        handleLeaveClipboard(clipToDelete);
-        return;
-    }
+  const handleLeaveClipboard = useCallback(async (clipboard: Clipboard) => {
+      try {
+          const res = await fetch("/api/quick-clip/share", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  clipboardId: clipboard._id,
+                  ownerId: clipboard.ownerId,
+                  action: 'leave'
+              })
+          });
+          if (res.ok) {
+              toast.success("Left clipboard");
+              setClipboards(prev => {
+                  const newClipboards = prev.filter(c => c !== clipboard);
+                  // Adjust tab if needed
+                  setActiveTab(current => {
+                      if (current >= newClipboards.length) {
+                          return Math.max(0, newClipboards.length - 1);
+                      }
+                      return current;
+                  });
+                  return newClipboards;
+              });
+          } else {
+              toast.error("Failed to leave clipboard");
+          }
+      } catch (error) {
+          toast.error("Error leaving clipboard");
+      }
+  }, []);
 
-    if (clipboards.length <= 1) {
-        toast.error("Cannot delete the last clipboard");
-        return;
-    }
+  const handleDeleteClipboard = useCallback((e: React.MouseEvent, index: number) => {
+    e.stopPropagation();
+    
+    setClipboards(prev => {
+        const clipToDelete = prev[index];
+        
+        if (clipToDelete.isOwner === false) {
+            handleLeaveClipboard(clipToDelete);
+            return prev;
+        }
 
-    const newClipboards = clipboards.filter((_, i) => i !== index);
-    setClipboards(newClipboards);
-    
-    // Adjust active tab
-    if (activeTab >= index && activeTab > 0) {
-        setActiveTab(activeTab - 1);
-    } else if (activeTab >= newClipboards.length) {
-        setActiveTab(newClipboards.length - 1);
-    }
-    
-    saveClipboards(newClipboards);
-  };
+        if (prev.length <= 1) {
+            toast.error("Cannot delete the last clipboard");
+            return prev;
+        }
+
+        const newClipboards = prev.filter((_, i) => i !== index);
+        
+        // Adjust active tab
+        setActiveTab(current => {
+            if (current >= index && current > 0) {
+                return current - 1;
+            } else if (current >= newClipboards.length) {
+                return newClipboards.length - 1;
+            }
+            return current;
+        });
+        
+        saveClipboards(newClipboards);
+        return newClipboards;
+    });
+  }, [handleLeaveClipboard, saveClipboards]);
+
+  const toggleHideClipboard = useCallback((e: React.MouseEvent, index: number) => {
+    e.stopPropagation();
+    setClipboards(prev => {
+        const newClipboards = [...prev];
+        newClipboards[index] = { ...newClipboards[index], isHidden: !newClipboards[index].isHidden };
+        saveClipboards(newClipboards, index);
+        return newClipboards;
+    });
+  }, [saveClipboards]);
 
   // Sharing Logic
   const handleAddUser = async () => {
@@ -212,7 +269,6 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
           if (res.ok) {
               toast.success("User added successfully");
               setShareUsername("");
-              // Refresh to get updated user list/ids
               const fetchRes = await fetch("/api/quick-clip?t=" + Date.now());
               if (fetchRes.ok) {
                   const d = await fetchRes.json();
@@ -244,11 +300,15 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
           });
           if (res.ok) {
               toast.success("User removed");
-              // Optimistic update
-              const newSharedWith = (activeClipboard.sharedWith || []).filter(u => u.username !== username);
-              const newClipboards = [...clipboards];
-              newClipboards[activeTab] = { ...activeClipboard, sharedWith: newSharedWith };
-              setClipboards(newClipboards);
+              setClipboards(prev => {
+                  const newClipboards = [...prev];
+                  const active = newClipboards[activeTab];
+                  if (active) {
+                      const newSharedWith = (active.sharedWith || []).filter(u => u.username !== username);
+                      newClipboards[activeTab] = { ...active, sharedWith: newSharedWith };
+                  }
+                  return newClipboards;
+              });
           } else {
               toast.error("Failed to remove user");
           }
@@ -256,33 +316,6 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
           toast.error("Error removing user");
       } finally {
           setIsSharing(false);
-      }
-  };
-
-  const handleLeaveClipboard = async (clipboard: Clipboard) => {
-      try {
-          const res = await fetch("/api/quick-clip/share", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                  clipboardId: clipboard._id,
-                  ownerId: clipboard.ownerId,
-                  action: 'leave'
-              })
-          });
-          if (res.ok) {
-              toast.success("Left clipboard");
-              const newClipboards = clipboards.filter(c => c !== clipboard);
-              setClipboards(newClipboards);
-              // Adjust tab if needed
-              if (activeTab >= newClipboards.length) {
-                  setActiveTab(Math.max(0, newClipboards.length - 1));
-              }
-          } else {
-              toast.error("Failed to leave clipboard");
-          }
-      } catch (error) {
-          toast.error("Error leaving clipboard");
       }
   };
 
@@ -301,15 +334,15 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
           });
           const data = await res.json();
           if (res.ok) {
-              const newClipboard = { 
-                  ...activeClipboard, 
-                  isPublic: data.data.isPublic, 
-                  publicToken: data.data.publicToken 
-              };
-               
-               const newClipboards = [...clipboards];
-               newClipboards[activeTab] = newClipboard;
-               setClipboards(newClipboards);
+               setClipboards(prev => {
+                  const newClipboards = [...prev];
+                  newClipboards[activeTab] = { 
+                      ...prev[activeTab], 
+                      isPublic: data.data.isPublic, 
+                      publicToken: data.data.publicToken 
+                  };
+                  return newClipboards;
+               });
                toast.success(data.data.isPublic ? "Public link created" : "Public link disabled");
           } else {
               toast.error(data.error || "Failed to toggle public link");
@@ -320,7 +353,6 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
           setIsSharing(false);
       }
   };
-
 
   if (isLoading) {
     return (
@@ -339,49 +371,22 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
         <div className="flex items-center justify-between px-1">
             <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar mask-gradient-right mr-4">
                 {clipboards.map((clip, index) => {
-                    const clipIsShared = clip.isOwner === false;
+                    if (!showHiddenMaster && clip.isHidden) return null;
                     return (
-                    <div 
-                        key={clip._id || index} 
-                        className={cn(
-                            "group relative flex items-center gap-1 px-3 py-1.5 rounded-t-md border-t border-x cursor-pointer min-w-[120px] transition-colors select-none",
-                            activeTab === index 
-                                ? "bg-background border-border text-foreground z-10 -mb-[2px] pb-2" 
-                                : "bg-muted/50 border-transparent text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                        )}
-                        onClick={() => setActiveTab(index)}
-                    >
-                        {clipIsShared && <Shield className="h-3 w-3 text-blue-500 mr-1" />}
-                        <Input
-                            value={clip.name}
-                            onChange={(e) => handleNameChange(e, index)}
-                            className={cn(
-                                "h-6 p-0 border-none bg-transparent shadow-none focus-visible:ring-0 font-medium text-sm w-full cursor-text",
-                                isPrivacyMode && "blur-sm group-hover:blur-none transition-all"
-                            )}
-                            // Allow typing without switching tab if already active, but switch if inactive
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (activeTab !== index) setActiveTab(index);
-                            }} 
+                        <ClipboardTab 
+                            key={clip._id || index}
+                            clip={clip}
+                            index={index}
+                            isActive={activeTab === index}
+                            isPrivacyMode={isPrivacyMode}
+                            setActiveTab={setActiveTab}
+                            handleNameChange={handleNameChange}
+                            toggleHideClipboard={toggleHideClipboard}
+                            handleDeleteClipboard={handleDeleteClipboard}
+                            clipboardsCount={clipboards.length}
                         />
-                        {/* Only show delete/leave if > 1 item OR if it's shared (can always leave shared) */}
-                        {(clipboards.length > 1 || clipIsShared) && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                    "h-5 w-5 opacity-0 group-hover:opacity-100 -mr-1 transition-all",
-                                    clipIsShared ? "hover:text-destructive" : "hover:bg-destructive/10 hover:text-destructive"
-                                )}
-                                onClick={(e) => handleDeleteClipboard(e, index)}
-                                title={clipIsShared ? "Leave Clipboard" : "Delete Clipboard"}
-                            >
-                                {clipIsShared ? <LogOut className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                            </Button>
-                        )}
-                    </div>
-                )})}
+                    );
+                })}
                 <Button
                     variant="ghost"
                     size="icon"
@@ -393,7 +398,6 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
             </div>
             
             <div className="flex items-center shrink-0 gap-2">
-                {/* Share Button for Active Tab */}
                 {isOwner && activeClipboard._id && (
                      <Button 
                         variant="ghost" 
@@ -560,3 +564,69 @@ export function QuickClipboardEditor({ isPrivacyMode = false }: { isPrivacyMode?
     </div>
   );
 }
+
+const ClipboardTab = memo(function ClipboardTab({
+    clip,
+    index,
+    isActive,
+    isPrivacyMode,
+    setActiveTab,
+    handleNameChange,
+    toggleHideClipboard,
+    handleDeleteClipboard,
+    clipboardsCount
+}: any) {
+    const clipIsShared = clip.isOwner === false;
+    
+    return (
+        <div 
+            className={cn(
+                "group relative flex items-center gap-1 px-3 py-1.5 rounded-t-md border-t border-x cursor-pointer min-w-[120px] transition-colors select-none",
+                isActive 
+                    ? "bg-background border-border text-foreground z-10 -mb-[2px] pb-2" 
+                    : "bg-muted/50 border-transparent text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+            )}
+            onClick={() => setActiveTab(index)}
+        >
+            {clipIsShared && <Shield className="h-3 w-3 text-blue-500 mr-1" />}
+            <Input
+                value={clip.name}
+                onChange={(e) => handleNameChange(e.target.value, index)}
+                className={cn(
+                    "h-6 p-0 border-none bg-transparent shadow-none focus-visible:ring-0 font-medium text-sm w-full cursor-text",
+                    isPrivacyMode && "blur-sm group-hover:blur-none transition-all"
+                )}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isActive) setActiveTab(index);
+                }} 
+            />
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 hover:bg-muted"
+                    onClick={(e) => toggleHideClipboard(e, index)}
+                    title={clip.isHidden ? "Show Clipboard" : "Hide Clipboard"}
+                >
+                    {clip.isHidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                </Button>
+                
+                {(clipboardsCount > 1 || clipIsShared) && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                            "h-5 w-5 -mr-1 transition-all",
+                            clipIsShared ? "hover:text-destructive" : "hover:bg-destructive/10 hover:text-destructive"
+                        )}
+                        onClick={(e) => handleDeleteClipboard(e, index)}
+                        title={clipIsShared ? "Leave Clipboard" : "Delete Clipboard"}
+                    >
+                        {clipIsShared ? <LogOut className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    </Button>
+                )}
+            </div>
+        </div>
+    );
+});

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Habit, HabitLog } from '@/types';
 import { toast } from 'sonner';
 
@@ -27,7 +27,7 @@ export function useHabits() {
     fetchHabits();
   }, [fetchHabits]);
 
-  const addHabit = async (habitData: Omit<Habit, 'id' | 'createdAt' | 'updatedAt' | 'logs'>) => {
+  const addHabit = useCallback(async (habitData: Omit<Habit, 'id' | 'createdAt' | 'updatedAt' | 'logs'>) => {
     try {
       const res = await fetch('/api/habits', {
         method: 'POST',
@@ -46,9 +46,9 @@ export function useHabits() {
       toast.error('Failed to create habit');
       return false;
     }
-  };
+  }, []);
 
-  const updateHabit = async (id: string, habitData: Partial<Habit>) => {
+  const updateHabit = useCallback(async (id: string, habitData: Partial<Habit>) => {
     try {
       const res = await fetch(`/api/habits/${id}`, {
         method: 'PUT',
@@ -67,9 +67,9 @@ export function useHabits() {
       toast.error('Failed to update habit');
       return false;
     }
-  };
+  }, []);
 
-  const deleteHabit = async (id: string) => {
+  const deleteHabit = useCallback(async (id: string) => {
     try {
       const res = await fetch(`/api/habits/${id}`, {
         method: 'DELETE',
@@ -86,9 +86,9 @@ export function useHabits() {
       toast.error('Failed to delete habit');
       return false;
     }
-  };
+  }, []);
 
-  const toggleHabitLog = async (habitId: string, date: string, completed: boolean, value?: number) => {
+  const toggleHabitLog = useCallback(async (habitId: string, date: string, completed: boolean, value?: number) => {
     try {
       if (completed) {
         const res = await fetch(`/api/habits/${habitId}/logs`, {
@@ -137,15 +137,18 @@ export function useHabits() {
       toast.error('Failed to update log');
       return false;
     }
-  };
+  }, []);
 
-  const filteredHabits = habits.filter(habit => {
+  const filteredHabits = useMemo(() => {
+    if (!searchQuery.trim()) return habits;
     const query = searchQuery.toLowerCase();
-    return (
-      habit.title.toLowerCase().includes(query) ||
-      habit.description?.toLowerCase().includes(query)
-    );
-  });
+    return habits.filter(habit => {
+      return (
+        habit.title.toLowerCase().includes(query) ||
+        habit.description?.toLowerCase().includes(query)
+      );
+    });
+  }, [habits, searchQuery]);
 
   return {
     habits: filteredHabits,

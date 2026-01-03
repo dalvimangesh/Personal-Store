@@ -207,6 +207,18 @@ export default function Home() {
   } = useSharedSnippets();
 
   const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit'>('snippets');
+  
+  useEffect(() => {
+    const savedView = localStorage.getItem("lastView") as any;
+    if (savedView) {
+      setCurrentView(savedView);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("lastView", currentView);
+  }, [currentView]);
+
   const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
   const [selectedSharedSnippet, setSelectedSharedSnippet] = useState<SharedSnippet | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -219,6 +231,22 @@ export default function Home() {
   // Privacy Mode State
   const [isPrivacyMode, setIsPrivacyMode] = useState(false);
   const togglePrivacyMode = () => setIsPrivacyMode(!isPrivacyMode);
+
+  // Master Hide/Show State
+  const [showHiddenMaster, setShowHiddenMaster] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("showHiddenMaster");
+    if (saved !== null) {
+      setShowHiddenMaster(saved === "true");
+    }
+  }, []);
+
+  const toggleHiddenMaster = () => {
+    const newVal = !showHiddenMaster;
+    setShowHiddenMaster(newVal);
+    localStorage.setItem("showHiddenMaster", String(newVal));
+  };
 
   const [genericSearchQuery, setGenericSearchQuery] = useState("");
 
@@ -236,14 +264,20 @@ export default function Home() {
   const uniqueTags = useMemo(() => {
     const tags = new Set<string>();
     snippets.forEach((s) => {
-        if (!s.isHidden) {
+        const isSoftVisible = showHiddenMaster || !s.isHiding;
+        if (!s.isHidden && isSoftVisible) {
              s.tags.forEach((t) => tags.add(t))
         }
     });
     return Array.from(tags).sort();
-  }, [snippets]);
+  }, [snippets, showHiddenMaster]);
 
   const displayedSnippets = snippets.filter((snippet) => {
+    // If showHiddenMaster is false, don't show snippets marked as isHiding
+    if (!showHiddenMaster && snippet.isHiding) {
+        return false;
+    }
+
     if (showHidden) {
         if (!snippet.isHidden) return false;
     } else {
@@ -284,13 +318,14 @@ export default function Home() {
     }
   };
 
-  const handleSaveSnippet = (data: { title: string; content: string; tags: string[]; isHidden: boolean }) => {
+  const handleSaveSnippet = (data: { title: string; content: string; tags: string[]; isHidden: boolean; isHiding: boolean }) => {
     if (selectedSnippet) {
       updateSnippet(selectedSnippet.id, {
         title: data.title,
         content: data.content,
         tags: data.tags,
         isHidden: data.isHidden,
+        isHiding: data.isHiding,
       });
       toast.success("Snippet updated!");
     } else {
@@ -299,6 +334,7 @@ export default function Home() {
         content: data.content,
         tags: data.tags,
         isHidden: data.isHidden,
+        isHiding: data.isHiding,
       });
       toast.success("Snippet added!");
     }
@@ -582,23 +618,23 @@ export default function Home() {
 
           {currentView === 'quick-clip' ? (
             <div className="flex-1 h-full min-h-[500px]">
-                <QuickClipboardEditor isPrivacyMode={isPrivacyMode} />
+                <QuickClipboardEditor isPrivacyMode={isPrivacyMode} showHiddenMaster={showHiddenMaster} />
             </div>
           ) : currentView === 'tracker' ? (
-             <div className="flex-1 w-full">
-                <TrackerStore isPrivacyMode={isPrivacyMode} />
-             </div>
+            <div className="flex-1 w-full">
+                <TrackerStore isPrivacyMode={isPrivacyMode} showHiddenMaster={showHiddenMaster} />
+            </div>
           ) : currentView === 'todo' ? (
-             <div className="flex-1 h-full min-h-[500px] w-full">
-                <TodoStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
-             </div>
+            <div className="flex-1 h-full min-h-[500px] w-full">
+                <TodoStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} showHiddenMaster={showHiddenMaster} />
+            </div>
           ) : currentView === 'habit' ? (
-             <div className="flex-1 h-full min-h-[500px] w-full">
-                <HabitStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
-             </div>
+            <div className="flex-1 h-full min-h-[500px] w-full">
+                <HabitStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} showHiddenMaster={showHiddenMaster} />
+            </div>
           ) : currentView === 'link-share' ? (
              <div className="flex-1 h-full min-h-[500px] w-full">
-                <LinkShareEditor searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
+                <LinkShareEditor searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} showHiddenMaster={showHiddenMaster} />
              </div>
           ) : currentView === 'dropzone' ? (
              <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden">
@@ -635,6 +671,28 @@ export default function Home() {
                     </div>
 
                     <div className="grid gap-8">
+                        <section className="space-y-4">
+                            <h2 className="text-2xl font-semibold">Store Settings</h2>
+                            <div className="border rounded-xl p-8 bg-card shadow-sm space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <p className="font-medium">Master Visibility Toggle</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Show or hide items across all stores that you've marked as "hidden".
+                                        </p>
+                                    </div>
+                                    <Button 
+                                        variant={showHiddenMaster ? "default" : "outline"}
+                                        onClick={toggleHiddenMaster}
+                                        className="gap-2"
+                                    >
+                                        {showHiddenMaster ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                        {showHiddenMaster ? "Showing Hidden" : "Hiding Hidden"}
+                                    </Button>
+                                </div>
+                            </div>
+                        </section>
+
                         <section className="space-y-4">
                             <h2 className="text-2xl font-semibold">Stores & Features</h2>
                             <div className="border rounded-xl p-8 bg-card shadow-sm">
@@ -742,7 +800,14 @@ export default function Home() {
                       {snippet.title}
                     </h3>
                     {snippet.isHidden && (
-                        <EyeOff className="h-3 w-3 text-muted-foreground" />
+                        <span title="Secretly Hidden">
+                            <EyeOff className="h-3 w-3 text-muted-foreground" />
+                        </span>
+                    )}
+                    {snippet.isHiding && (
+                        <span title="Soft Hidden">
+                            <EyeOff className="h-3 w-3 text-red-500/50" />
+                        </span>
                     )}
                   </div>
                   <p className={`text-xs text-muted-foreground line-clamp-1 mb-2 ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300 select-none" : ""}`}>
@@ -804,6 +869,7 @@ export default function Home() {
         {isEditorOpen && currentView === 'snippets' && (
              <div className="border-l bg-background h-screen sticky top-0 w-full md:w-[50%] shadow-xl z-30 transition-all duration-300 ease-in-out flex flex-col">
                 <SnippetEditor 
+                    key={selectedSnippet?.id || 'new'}
                     snippet={selectedSnippet}
                     onSave={handleSaveSnippet}
                     onCancel={() => setIsEditorOpen(false)}
@@ -814,6 +880,7 @@ export default function Home() {
         {isEditorOpen && currentView === 'public-store' && (
              <div className="border-l bg-background h-screen sticky top-0 w-full md:w-[50%] shadow-xl z-30 transition-all duration-300 ease-in-out flex flex-col">
                 <SharedSnippetEditor 
+                    key={selectedSharedSnippet?.id || 'new-shared'}
                     snippet={selectedSharedSnippet}
                     onSave={handleSaveSharedSnippet}
                     onCancel={() => setIsEditorOpen(false)}

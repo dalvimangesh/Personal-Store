@@ -271,9 +271,6 @@ export default function LoginPage() {
                           Remember me
                         </Label>
                       </div>
-                      <Button variant="link" size="sm" className="px-0 h-auto text-xs font-normal">
-                        Forgot password?
-                      </Button>
                     </div>
                   )}
 
@@ -342,8 +339,6 @@ export default function LoginPage() {
             © 2025 Personal Store. Built for privacy.
           </p>
           <div className="flex gap-6">
-            <a href="#" className="text-[10px] text-muted-foreground hover:text-foreground">Privacy Policy</a>
-            <a href="#" className="text-[10px] text-muted-foreground hover:text-foreground">Terms of Service</a>
             <a href="https://github.com/dalvimangesh/Personal-Store" className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1">
               Github
             </a>

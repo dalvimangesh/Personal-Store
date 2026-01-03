@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, memo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,28 +14,14 @@ interface SharedSnippetEditorProps {
   onDelete?: (id: string) => void;
 }
 
-export function SharedSnippetEditor({ snippet, onSave, onCancel, onDelete }: SharedSnippetEditorProps) {
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [tags, setTags] = useState("");
-  const [allowedUsers, setAllowedUsers] = useState("");
+export const SharedSnippetEditor = memo(function SharedSnippetEditor({ snippet, onSave, onCancel, onDelete }: SharedSnippetEditorProps) {
+  const [title, setTitle] = useState(snippet?.title || "");
+  const [content, setContent] = useState(snippet?.content || "");
+  const [tags, setTags] = useState(snippet?.tags.join(", ") || "");
+  const [allowedUsers, setAllowedUsers] = useState(snippet?.allowedUsers.join(", ") || "");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    if (snippet) {
-      setTitle(snippet.title);
-      setContent(snippet.content);
-      setTags(snippet.tags.join(", "));
-      setAllowedUsers(snippet.allowedUsers.join(", "));
-    } else {
-      setTitle("");
-      setContent("");
-      setTags("");
-      setAllowedUsers("");
-    }
-  }, [snippet]);
-
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!title.trim() || !content.trim()) {
       toast.error("Title and Content are required");
       return;
@@ -57,9 +43,9 @@ export function SharedSnippetEditor({ snippet, onSave, onCancel, onDelete }: Sha
       tags: tagsArray,
       allowedUsers: allowedUsersArray,
     });
-  };
+  }, [title, content, tags, allowedUsers, onSave]);
 
-  const handleCopyLink = () => {
+  const handleCopyLink = useCallback(() => {
     if (snippet?.id) {
       const url = `${window.location.origin}/share/${snippet.id}`;
       navigator.clipboard.writeText(url);
@@ -67,9 +53,9 @@ export function SharedSnippetEditor({ snippet, onSave, onCancel, onDelete }: Sha
     } else {
       toast.error("Save the snippet first to get a link");
     }
-  };
+  }, [snippet?.id]);
 
-  const insertVariable = () => {
+  const insertVariable = useCallback(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -86,7 +72,7 @@ export function SharedSnippetEditor({ snippet, onSave, onCancel, onDelete }: Sha
       const selectionEnd = selectionStart + 8;
       textarea.setSelectionRange(selectionStart, selectionEnd);
     }, 0);
-  };
+  }, [content]);
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -203,5 +189,5 @@ export function SharedSnippetEditor({ snippet, onSave, onCancel, onDelete }: Sha
       </div>
     </div>
   );
-}
+});
 

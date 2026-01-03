@@ -19,6 +19,7 @@ export interface ITodoCategory {
   sharedWith?: mongoose.Types.ObjectId[];
   isPublic?: boolean;
   publicToken?: string;
+  isHidden?: boolean;
 }
 
 export interface ITodoStore extends Document {
@@ -48,7 +49,8 @@ const TodoCategorySchema = new Schema({
   items: [TodoItemSchema],
   sharedWith: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   isPublic: { type: Boolean, default: false },
-  publicToken: { type: String }
+  publicToken: { type: String },
+  isHidden: { type: Boolean, default: false }
 });
 
 const TodoStoreSchema: Schema = new Schema(

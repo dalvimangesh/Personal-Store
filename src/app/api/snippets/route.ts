@@ -28,6 +28,7 @@ export async function GET() {
       content: decrypt(doc.content),
       tags: doc.tags,
       isHidden: doc.isHidden || false,
+      isHiding: doc.isHiding || false,
       createdAt: doc.createdAt,
     }));
     return NextResponse.json({ success: true, data: formattedSnippets });
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
         content: decrypt(snippet.content),
         tags: snippet.tags,
         isHidden: snippet.isHidden,
+        isHiding: snippet.isHiding,
         createdAt: snippet.createdAt
       } 
     }, { status: 201 });

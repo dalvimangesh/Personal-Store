@@ -50,6 +50,7 @@ export async function PUT(
         content: decrypt(s.content),
         tags: s.tags,
         isHidden: s.isHidden,
+        isHiding: s.isHiding,
         createdAt: s.createdAt
       } 
     });

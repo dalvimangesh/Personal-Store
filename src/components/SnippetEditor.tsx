@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, memo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,33 +10,20 @@ import { HighlightedTextarea } from "@/components/ui/highlighted-textarea";
 
 interface SnippetEditorProps {
   snippet?: Snippet | null;
-  onSave: (data: { title: string; content: string; tags: string[]; isHidden: boolean }) => void;
+  onSave: (data: { title: string; content: string; tags: string[]; isHidden: boolean; isHiding: boolean }) => void;
   onCancel: () => void;
   onDelete?: (id: string) => void;
 }
 
-export function SnippetEditor({ snippet, onSave, onCancel, onDelete }: SnippetEditorProps) {
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [tags, setTags] = useState("");
-  const [isHidden, setIsHidden] = useState(false);
+export const SnippetEditor = memo(function SnippetEditor({ snippet, onSave, onCancel, onDelete }: SnippetEditorProps) {
+  const [title, setTitle] = useState(snippet?.title || "");
+  const [content, setContent] = useState(snippet?.content || "");
+  const [tags, setTags] = useState(snippet?.tags.join(", ") || "");
+  const [isHidden, setIsHidden] = useState(snippet?.isHidden || false);
+  const [isHiding, setIsHiding] = useState(snippet?.isHiding || false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    if (snippet) {
-      setTitle(snippet.title);
-      setContent(snippet.content);
-      setTags(snippet.tags.join(", "));
-      setIsHidden(snippet.isHidden || false);
-    } else {
-      setTitle("");
-      setContent("");
-      setTags("");
-      setIsHidden(false);
-    }
-  }, [snippet]);
-
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!title.trim() || !content.trim()) {
       toast.error("Title and Content are required");
       return;
@@ -52,10 +39,11 @@ export function SnippetEditor({ snippet, onSave, onCancel, onDelete }: SnippetEd
       content,
       tags: tagsArray,
       isHidden,
+      isHiding,
     });
-  };
+  }, [title, content, tags, isHidden, isHiding, onSave]);
 
-  const insertVariable = () => {
+  const insertVariable = useCallback(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -73,7 +61,7 @@ export function SnippetEditor({ snippet, onSave, onCancel, onDelete }: SnippetEd
       const selectionEnd = selectionStart + 8; // length of "variable"
       textarea.setSelectionRange(selectionStart, selectionEnd);
     }, 0);
-  };
+  }, [content]);
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -136,7 +124,22 @@ export function SnippetEditor({ snippet, onSave, onCancel, onDelete }: SnippetEd
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2 cursor-pointer"
               >
                 {isHidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                {isHidden ? "Hidden" : "Visible"}
+                {isHidden ? "Hidden Snippet" : "Normal Snippet"}
+              </Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hiding-mode"
+                checked={isHiding}
+                onCheckedChange={(checked) => setIsHiding(checked as boolean)}
+              />
+              <Label
+                htmlFor="hiding-mode"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2 cursor-pointer"
+              >
+                {isHiding ? <EyeOff className="h-3 w-3 text-red-500" /> : <Eye className="h-3 w-3 text-green-500" />}
+                {isHiding ? "Soft Hidden" : "Soft Visible"}
               </Label>
             </div>
           </div>
@@ -182,4 +185,4 @@ export function SnippetEditor({ snippet, onSave, onCancel, onDelete }: SnippetEd
       </div>
     </div>
   );
-}
+});
