@@ -29,6 +29,7 @@ export async function GET() {
     }).populate('userId', 'username'); // Populate owner info
 
     const allCategories = [];
+    const myFolders = myLinkShare?.folders || [];
 
     // Process my own categories
     if (myLinkShare) {
@@ -59,6 +60,7 @@ export async function GET() {
                 ...catObj,
                 name: decrypt(catObj.name),
                 isHidden: catObj.isHidden || false,
+                folderId: catObj.folderId || null,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 items: (catObj.items || []).map((item: any) => ({
                     ...item,
@@ -80,7 +82,8 @@ export async function GET() {
             items: [{ label: "", value: "" }],
             isOwner: true,
             ownerId: userId,
-            sharedWith: []
+            sharedWith: [],
+            folderId: null
         });
     }
 
@@ -132,6 +135,7 @@ export async function GET() {
         success: true, 
         data: { 
             categories: allCategories, 
+            folders: myFolders,
             updatedAt: myLinkShare?.updatedAt || new Date()
         } 
     });
@@ -154,22 +158,17 @@ export async function POST(request: Request) {
     const body = await request.json();
     const userId = session.userId;
     
-    if (!body.categories) {
-         return NextResponse.json({ success: false, error: "Invalid data: categories missing" }, { status: 400 });
+    if (!body.categories && !body.folders) {
+         return NextResponse.json({ success: false, error: "Invalid data: categories or folders missing" }, { status: 400 });
     }
 
-    // Filter only owned categories
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ownedCategories = body.categories.filter((cat: any) => {
-        // If it has no ownerId, assume it's new and owned by me.
-        // If it has ownerId, it must match userId.
-        // Or use the isOwner flag if trusted (backend check is better).
-        // We can check if ownerId is present and !== userId.
+    const ownedCategories = body.categories ? body.categories.filter((cat: any) => {
         if (cat.ownerId && cat.ownerId !== userId) return false;
-        // Also exclude if isOwner is explicitly false
         if (cat.isOwner === false) return false;
         return true;
-    });
+    }) : null;
+
+    const folders = body.folders || null;
 
     // Detect deleted items (only for owned categories)
     const currentLinkShare = await LinkShare.findOne({ userId });
@@ -242,10 +241,11 @@ export async function POST(request: Request) {
     // But if we send the array back, we should keep the IDs.
     
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const encryptedCategories = ownedCategories.map((cat: any) => ({
+    const encryptedCategories = ownedCategories ? ownedCategories.map((cat: any) => ({
         ...cat,
         name: encrypt(cat.name),
         isHidden: cat.isHidden || false,
+        folderId: cat.folderId || null,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         items: (cat.items || []).map((item: any) => ({
             ...item,
@@ -255,29 +255,25 @@ export async function POST(request: Request) {
         // Ensure sharedWith is just IDs for DB
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         sharedWith: cat.sharedWith ? cat.sharedWith.map((u: any) => u.userId || u) : []
-    }));
+    })) : undefined;
+
+    const updateDoc: any = {};
+    if (encryptedCategories !== undefined) {
+        updateDoc.categories = encryptedCategories;
+        updateDoc.items = []; // Clear legacy items
+    }
+    if (folders !== null) {
+        updateDoc.folders = folders;
+    }
 
     // Expecting categories array
     const linkShare = await LinkShare.findOneAndUpdate(
         { userId },
-        { 
-            categories: encryptedCategories,
-            items: [] // Clear legacy items after successful update
-        },
+        updateDoc,
         { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
     // Re-fetch to get populated/formatted return if needed, or just return what we saved (but decrypted).
-    // For simplicity and consistency, let's return the decrypted structure of what we just saved.
-    // Note: We are NOT returning the shared categories here. The frontend should probably merge them or re-fetch.
-    // Or we can just return success and let frontend re-fetch. 
-    // The current frontend uses the response to update state. 
-    // If we return only owned categories, the shared ones might disappear from UI until refresh.
-    // So we should probably return the full set like GET does, OR just return the owned ones and frontend merges.
-    // Let's return owned ones + shared ones (by fetching them).
-    
-    // Re-use GET logic logic partially? Too complex for one function. 
-    // Let's just return the owned ones we saved. Frontend can keep shared ones in state.
     
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const responseCategories = linkShare.categories.map((cat: any) => {
@@ -285,6 +281,8 @@ export async function POST(request: Request) {
         return {
             ...catObj,
             name: decrypt(catObj.name),
+            isHidden: catObj.isHidden || false,
+            folderId: catObj.folderId || null,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             items: (catObj.items || []).map((item: any) => ({
                 ...item,
@@ -303,6 +301,7 @@ export async function POST(request: Request) {
       success: true, 
       data: {
         categories: responseCategories,
+        folders: linkShare.folders,
         updatedAt: linkShare.updatedAt
       } 
     });

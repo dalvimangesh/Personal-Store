@@ -12,6 +12,13 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Folder } from "lucide-react";
 
 interface LinkItem {
   _id?: string;
@@ -22,6 +29,11 @@ interface LinkItem {
 interface SharedUser {
     userId: string;
     username: string;
+}
+
+interface LinkFolder {
+  _id?: string;
+  name: string;
 }
 
 interface LinkCategory {
@@ -35,6 +47,7 @@ interface LinkCategory {
   sharedWith?: SharedUser[];
   isPublic?: boolean;
   publicToken?: string;
+  folderId?: string;
 }
 
 const isValidUrl = (string: string) => {
@@ -48,9 +61,18 @@ const isValidUrl = (string: string) => {
 
 export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false, showHiddenMaster = false }: { searchQuery?: string; isPrivacyMode?: boolean; showHiddenMaster?: boolean }) {
   const [categories, setCategories] = useState<LinkCategory[]>([]);
+  const [folders, setFolders] = useState<LinkFolder[]>([]);
+  const [activeFolderId, setActiveFolderId] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Search effect to switch to 'all' folder
+  useEffect(() => {
+    if (searchQuery) {
+        setActiveFolderId("all");
+    }
+  }, [searchQuery]);
 
   // Share Dialog State
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -65,15 +87,17 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false, showH
       const data = await res.json();
       if (res.ok) {
           let fetchedCategories = data.data.categories || [];
+          let fetchedFolders = data.data.folders || [];
           
           if (!fetchedCategories.length && data.data.items) {
-               fetchedCategories = [{ name: "Default", items: data.data.items, isOwner: true }];
+               fetchedCategories = [{ name: "Default", items: data.data.items, isOwner: true, folderId: null }];
           }
           if (!fetchedCategories.length) {
-              fetchedCategories = [{ name: "Default", items: [{ label: "", value: "" }], isOwner: true }];
+              fetchedCategories = [{ name: "Default", items: [{ label: "", value: "" }], isOwner: true, folderId: null }];
           }
 
           setCategories(fetchedCategories);
+          setFolders(fetchedFolders);
       } else {
         toast.error("Failed to load Link Share");
       }
@@ -97,6 +121,15 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false, showH
       // Filter by master hidden toggle
       if (!showHiddenMaster && cat.isHidden) return null;
 
+      // Filter by folder
+      if (activeFolderId !== "all") {
+          if (activeFolderId === "other") {
+              if (cat.folderId) return null;
+          } else {
+              if (cat.folderId !== activeFolderId) return null;
+          }
+      }
+
       const matchesCategory = (cat.name || "").toLowerCase().includes(searchQuery.toLowerCase());
       const matchingItems = (cat.items || []).filter(item => 
           (item.label || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -110,53 +143,72 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false, showH
       }
       return null;
     }).filter((cat): cat is LinkCategory => cat !== null);
-  }, [categories, searchQuery, showHiddenMaster]);
+  }, [categories, searchQuery, showHiddenMaster, activeFolderId]);
 
-  const saveCategories = useCallback(async (newCategories: LinkCategory[]) => {
+  const saveData = useCallback(async (newCategories?: LinkCategory[], newFolders?: LinkFolder[]) => {
     setIsSaving(true);
     try {
-        // Split categories into owned and shared
-        const ownedCategories = newCategories.filter(c => c.isOwner !== false);
-        const sharedCategories = newCategories.filter(c => c.isOwner === false);
+        const categoriesToSave = newCategories || categories;
+        const foldersToSave = newFolders || folders;
 
-        // 1. Save owned categories
+        // Split categories into owned and shared
+        const ownedCategories = categoriesToSave.filter(c => c.isOwner !== false);
+        const sharedCategories = categoriesToSave.filter(c => c.isOwner === false);
+
+        // 1. Save owned categories and folders
         const res = await fetch("/api/link-share", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ categories: ownedCategories }),
+            body: JSON.stringify({ 
+                categories: ownedCategories,
+                folders: foldersToSave
+            }),
         });
         
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to save owned categories");
+        if (!res.ok) throw new Error(data.error || "Failed to save data");
 
-            // Update state with returned IDs for owned categories
-        if (data.data && data.data.categories) {
-            const savedOwned = data.data.categories;
-            setCategories(prevCats => {
-                let savedIndex = 0;
-                return prevCats.map(cat => {
-                    if (cat.isOwner !== false) {
-                        // This is an owned category
-                        if (savedIndex < savedOwned.length) {
-                            const savedCat = savedOwned[savedIndex];
-                            savedIndex++;
-                            // Patch ID and public token if missing
-                            return {
-                                ...cat,
-                                _id: savedCat._id,
-                                publicToken: savedCat.publicToken || cat.publicToken,
-                                // We preserve local 'name' and 'items' to not overwrite concurrent edits
-                            };
+        // Update state with returned IDs for owned categories and folders
+        if (data.data) {
+            if (data.data.categories) {
+                const savedOwned = data.data.categories;
+                setCategories(prevCats => {
+                    let savedIndex = 0;
+                    return prevCats.map(cat => {
+                        if (cat.isOwner !== false) {
+                            if (savedIndex < savedOwned.length) {
+                                const savedCat = savedOwned[savedIndex];
+                                savedIndex++;
+                                return {
+                                    ...cat,
+                                    _id: savedCat._id,
+                                    publicToken: savedCat.publicToken || cat.publicToken,
+                                    folderId: savedCat.folderId || cat.folderId,
+                                };
+                            }
                         }
-                    }
-                    return cat;
+                        return cat;
+                    });
                 });
-            });
+            }
+            if (data.data.folders) {
+                // Trust the server's folder list to avoid duplicate keys/IDs
+                // But for the active folder, if we are currently editing it, preserve the local name
+                const savedFolders = data.data.folders;
+                setFolders(prevFolders => {
+                    return savedFolders.map((sf: any) => {
+                        const pf = prevFolders.find(p => p._id === sf._id);
+                        if (pf && pf._id === activeFolderId) {
+                            return { ...sf, name: pf.name };
+                        }
+                        return sf;
+                    });
+                });
+            }
         }
 
         // 2. Update shared categories individually
         await Promise.all(sharedCategories.map(async (cat) => {
-            // Only send necessary data
             const updateData = {
                 categoryId: cat._id,
                 ownerId: cat.ownerId,
@@ -182,26 +234,84 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false, showH
     } finally {
       setIsSaving(false);
     }
-  }, []);
+  }, [categories, folders]);
 
-  const debouncedSave = useCallback((newCategories: LinkCategory[]) => {
+  const debouncedSave = useCallback((newCategories?: LinkCategory[], newFolders?: LinkFolder[]) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
     timeoutRef.current = setTimeout(() => {
-      saveCategories(newCategories);
+      saveData(newCategories, newFolders);
     }, 1000);
-  }, [saveCategories]);
+  }, [saveData]);
+
+  // Folder Operations
+  const handleAddFolder = useCallback(() => {
+    setFolders(prev => {
+        const newFolders = [...prev, { name: "New Folder" }];
+        saveData(categories, newFolders);
+        return newFolders;
+    });
+  }, [categories, saveData]);
+
+  const handleFolderRename = useCallback((folderId: string | undefined, index: number, newName: string) => {
+    setFolders(prev => {
+        let newFolders;
+        if (folderId) {
+            newFolders = prev.map(f => f._id === folderId ? { ...f, name: newName } : f);
+        } else {
+            newFolders = prev.map((f, i) => i === index ? { ...f, name: newName } : f);
+        }
+        debouncedSave(categories, newFolders);
+        return newFolders;
+    });
+  }, [categories, debouncedSave]);
+
+  const handleFolderDelete = useCallback((folderId: string | undefined, index: number) => {
+    // When a folder is deleted, its categories go to 'other' (folderId = null)
+    setFolders(prev => {
+        let newFolders;
+        if (folderId) {
+            newFolders = prev.filter(f => f._id !== folderId);
+        } else {
+            newFolders = prev.filter((_, i) => i !== index);
+        }
+        
+        const newCategories = categories.map(cat => (folderId && cat.folderId === folderId) ? { ...cat, folderId: undefined } : cat);
+        
+        setCategories(newCategories);
+        saveData(newCategories, newFolders);
+
+        if (activeFolderId === folderId) {
+            setActiveFolderId("all");
+        }
+        
+        return newFolders;
+    });
+  }, [categories, activeFolderId, saveData]);
+
+  const handleMigrateCategory = useCallback((categoryIndex: number, folderId: string | null) => {
+    const newCategories = [...categories];
+    newCategories[categoryIndex] = { ...newCategories[categoryIndex], folderId: folderId || undefined };
+    setCategories(newCategories);
+    saveData(newCategories);
+  }, [categories, saveData]);
 
   // Category Operations
   const handleAddCategory = useCallback(() => {
     const newCategories = [
         ...categories, 
-        { name: "New Category", items: [{ label: "", value: "" }], isOwner: true, sharedWith: [] }
+        { 
+            name: "New Category", 
+            items: [{ label: "", value: "" }], 
+            isOwner: true, 
+            sharedWith: [],
+            folderId: activeFolderId === "all" || activeFolderId === "other" ? undefined : activeFolderId
+        }
     ];
     setCategories(newCategories);
-    saveCategories(newCategories);
-  }, [categories, saveCategories]);
+    saveData(newCategories);
+  }, [categories, activeFolderId, saveData]);
 
   const handleCategoryNameChange = useCallback((index: number, name: string) => {
       const newCategories = [...categories];
@@ -214,9 +324,9 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false, showH
     const newCategories = [...categories];
     newCategories[index] = { ...newCategories[index], isHidden: !newCategories[index].isHidden };
     setCategories(newCategories);
-    saveCategories(newCategories); // Immediate save for visibility
+    saveData(newCategories); // Immediate save for visibility
     toast.success(newCategories[index].isHidden ? "Category hidden" : "Category visible");
-  }, [categories, saveCategories]);
+  }, [categories, saveData]);
 
   const handleLeaveCategory = useCallback(async (category: LinkCategory) => {
       try {
@@ -254,8 +364,8 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false, showH
           newCategories = [{ name: "Default", items: [{ label: "", value: "" }], isOwner: true }];
       }
       setCategories(newCategories);
-      saveCategories(newCategories);
-  }, [categories, handleLeaveCategory, saveCategories]);
+      saveData(newCategories);
+  }, [categories, handleLeaveCategory, saveData]);
 
   // Item Operations
   const handleAddItem = useCallback((categoryIndex: number) => {
@@ -265,8 +375,8 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false, showH
         items: [...newCategories[categoryIndex].items, { label: "", value: "" }]
     };
     setCategories(newCategories);
-    saveCategories(newCategories); 
-  }, [categories, saveCategories]);
+    saveData(newCategories); 
+  }, [categories, saveData]);
 
   const handleItemChange = useCallback((categoryIndex: number, itemIndex: number, field: 'label' | 'value', val: string) => {
     const newCategories = [...categories];
@@ -292,8 +402,8 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false, showH
     };
 
     setCategories(newCategories);
-    saveCategories(newCategories); 
-  }, [categories, saveCategories]);
+    saveData(newCategories); 
+  }, [categories, saveData]);
 
   const handleCopy = useCallback(async (text: string) => {
       try {
@@ -453,17 +563,97 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false, showH
 
   return (
     <div className="flex flex-col h-full gap-6 w-full pb-10">
-        <div className="flex items-center justify-between px-1 sticky top-0 bg-background/95 backdrop-blur z-10 py-2 border-b">
-            <p className="text-sm text-muted-foreground">
-            Share links or short text between devices.
-            </p>
-            {isSaving ? (
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Loader2 className="h-3 w-3 animate-spin" /> Saving...
-                </span>
-            ) : (
-                <span className="text-xs text-muted-foreground">Saved</span>
-            )}
+        <div className="flex flex-col gap-4 sticky top-0 bg-background/95 backdrop-blur z-10 py-2 border-b">
+            <div className="flex items-center justify-between px-1">
+                <p className="text-sm text-muted-foreground">
+                Share links or short text between devices.
+                </p>
+                {isSaving ? (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Saving...
+                    </span>
+                ) : (
+                    <span className="text-xs text-muted-foreground">Saved</span>
+                )}
+            </div>
+
+            {/* Folder Tabs */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-4 pt-1 px-1 scrollbar-hide">
+                <Button 
+                    variant={activeFolderId === "all" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setActiveFolderId("all")}
+                    className="shrink-0 transition-none"
+                >
+                    All
+                </Button>
+                {folders.map((folder, index) => (
+                    <div 
+                        key={folder._id ? `folder-id-${folder._id}` : `folder-idx-${index}`} 
+                        className={`inline-flex items-center shrink-0 group/folder h-8 pl-3 pr-8 rounded-md border text-sm font-medium transition-none cursor-pointer relative shadow-xs ${
+                            activeFolderId === folder._id 
+                                ? "bg-primary text-primary-foreground border-primary shadow-none" 
+                                : "bg-background hover:bg-accent hover:text-accent-foreground border-input"
+                        }`}
+                        onClick={() => setActiveFolderId(folder._id!)}
+                    >
+                        <div className="relative flex items-center min-w-[30px] h-full">
+                            {/* Hidden span to measure text width accurately */}
+                            <span className="invisible whitespace-pre text-sm font-medium px-1 shadow-none" aria-hidden="true">
+                                {folder.name || "Folder Name"}
+                            </span>
+                            <Input
+                                value={folder.name}
+                                onChange={(e) => handleFolderRename(folder._id, index, e.target.value)}
+                                onFocus={() => setActiveFolderId(folder._id!)}
+                                className={`absolute inset-0 h-full w-full px-1 py-0 border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm font-medium shadow-none transition-none ${
+                                    activeFolderId === folder._id 
+                                        ? "text-primary-foreground placeholder:text-primary-foreground/50" 
+                                        : "text-foreground"
+                                }`}
+                                placeholder="Folder Name"
+                            />
+                        </div>
+                        
+                        <div className="absolute right-1 flex items-center opacity-0 group-hover/folder:opacity-100 transition-none">
+                             <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className={`h-7 w-7 shrink-0 transition-none ${
+                                    activeFolderId === folder._id 
+                                        ? "hover:bg-primary-foreground/20 text-primary-foreground" 
+                                        : "hover:bg-muted-foreground/10 text-muted-foreground hover:text-destructive"
+                                }`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (confirm(`Delete folder "${folder.name}"? Categories will be moved to "Other".`)) {
+                                        handleFolderDelete(folder._id, index);
+                                    }
+                                }}
+                                title="Delete folder"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
+                    </div>
+                ))}
+                <Button 
+                    variant={activeFolderId === "other" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setActiveFolderId("other")}
+                    className="shrink-0 transition-none"
+                >
+                    Other
+                </Button>
+                <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleAddFolder}
+                    className="shrink-0 border-dashed border-2 transition-none"
+                >
+                    <Plus className="h-4 w-4 mr-1" /> New Folder
+                </Button>
+            </div>
         </div>
 
         <div className="flex flex-col gap-8">
@@ -486,6 +676,8 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false, showH
                         handleDeleteItem={handleDeleteItem}
                         handleCopy={handleCopy}
                         categories={categories}
+                        folders={folders}
+                        handleMigrateCategory={handleMigrateCategory}
                     />
                 );
             })}
@@ -629,6 +821,8 @@ interface CategorySectionProps {
     handleDeleteItem: (categoryIndex: number, itemIndex: number) => void;
     handleCopy: (text: string) => void;
     categories: LinkCategory[];
+    folders: LinkFolder[];
+    handleMigrateCategory: (index: number, folderId: string | null) => void;
 }
 
 const CategorySection = memo(function CategorySection({
@@ -644,10 +838,13 @@ const CategorySection = memo(function CategorySection({
     handleItemChange,
     handleDeleteItem,
     handleCopy,
-    categories
+    categories,
+    folders,
+    handleMigrateCategory
 }: CategorySectionProps) {
     const isOwner = category.isOwner !== false;
     const isShared = !isOwner;
+    const currentFolder = folders.find(f => f._id === category.folderId);
 
     return (
         <div className="flex flex-col gap-2">
@@ -664,6 +861,34 @@ const CategorySection = memo(function CategorySection({
                         <Shield className="h-3 w-3" />
                         Shared by {category.ownerUsername}
                         </Badge>
+                )}
+
+                {isOwner && (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 gap-1 text-muted-foreground hover:text-foreground opacity-100 sm:opacity-0 sm:group-hover/cat:opacity-100 transition-opacity"
+                            >
+                                <Folder className="h-3 w-3" />
+                                <span className="text-xs">{currentFolder ? currentFolder.name : "Other"}</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => handleMigrateCategory(originalIndex, null)}>
+                                Other (None)
+                            </DropdownMenuItem>
+                            {folders.map((folder, index) => (
+                                <DropdownMenuItem 
+                                    key={folder._id ? `migrate-id-${folder._id}` : `migrate-idx-${index}`} 
+                                    onClick={() => handleMigrateCategory(originalIndex, folder._id!)}
+                                >
+                                    {folder.name}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 )}
 
                 <Button 
