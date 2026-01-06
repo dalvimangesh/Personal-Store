@@ -353,7 +353,13 @@ export function LinkShareEditor({ searchQuery = "", isPrivacyMode = false, showH
 
   const handleDeleteCategory = useCallback((index: number) => {
       const catToDelete = categories[index];
-      if (catToDelete.isOwner === false) {
+      const isOwner = catToDelete.isOwner !== false;
+
+      if (!window.confirm(`Are you sure you want to ${isOwner ? 'delete' : 'leave'} category "${catToDelete.name}"?`)) {
+          return;
+      }
+
+      if (!isOwner) {
           // Shared category - leave directly
           handleLeaveCategory(catToDelete);
           return;

@@ -98,6 +98,12 @@ export function useTodos() {
 
   const deleteCategory = useCallback(async (index: number) => {
       const catToDelete = categories[index];
+      const isOwner = catToDelete.isOwner !== false;
+
+      if (!window.confirm(`Are you sure you want to ${isOwner ? 'delete' : 'leave'} category "${catToDelete.name}"?`)) {
+          return;
+      }
+
       if (catToDelete.isOwner === false) {
           // Leave shared category
           try {
@@ -178,11 +184,43 @@ export function useTodos() {
     return true;
   }, [categories, saveCategories]);
 
+  const sortedCategories = useMemo(() => {
+    const statusOrder: Record<string, number> = {
+      'in_progress': 1,
+      'todo': 2,
+      'completed': 3
+    };
+
+    return categories.map(cat => ({
+      ...cat,
+      items: [...cat.items].sort((a, b) => {
+        const orderA = statusOrder[a.status] || 99;
+        const orderB = statusOrder[b.status] || 99;
+        
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        
+        // Secondary sort: Priority (higher first: 9 -> 0)
+        const priorityA = a.priority || 0;
+        const priorityB = b.priority || 0;
+        if (priorityA !== priorityB) {
+          return priorityB - priorityA;
+        }
+
+        // Tertiary sort: Creation date (newest first)
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      })
+    }));
+  }, [categories]);
+
   const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) return categories;
+    if (!searchQuery.trim()) return sortedCategories;
     
     const query = searchQuery.toLowerCase();
-    return categories.map(cat => {
+    return sortedCategories.map(cat => {
       const matchesCategory = cat.name.toLowerCase().includes(query);
       const filteredItems = cat.items.filter(item => 
           item.title.toLowerCase().includes(query) || 
@@ -194,7 +232,7 @@ export function useTodos() {
       }
       return null;
     }).filter((c): c is TodoCategory => c !== null);
-  }, [categories, searchQuery]);
+  }, [sortedCategories, searchQuery]);
 
   return {
     categories: filteredCategories,
