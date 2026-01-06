@@ -45,7 +45,7 @@ const HighlightedTextarea = React.forwardRef<HTMLTextAreaElement, HighlightedTex
         <div
             ref={backdropRef}
             className={cn(
-                "absolute inset-0 overflow-auto pointer-events-none font-mono text-sm leading-relaxed whitespace-pre-wrap break-words z-0",
+                "absolute inset-0 overflow-hidden pointer-events-none font-mono text-sm leading-relaxed whitespace-pre-wrap break-words z-0",
                 className
             )}
             aria-hidden="true"
@@ -60,7 +60,7 @@ const HighlightedTextarea = React.forwardRef<HTMLTextAreaElement, HighlightedTex
             onChange={onChange}
             onScroll={handleScroll}
             className={cn(
-                "relative block w-full h-full bg-transparent font-mono text-sm leading-relaxed resize-none focus:outline-none z-10 text-foreground",
+                "relative block w-full h-full bg-transparent font-mono text-sm leading-relaxed resize-none focus:outline-none z-10 text-foreground overflow-auto",
                 className
             )}
             spellCheck={false}

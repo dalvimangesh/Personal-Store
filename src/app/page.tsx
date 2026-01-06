@@ -456,7 +456,7 @@ export default function Home() {
 
       {/* Main Content Area - Using Flex to adjust width when editor is open */}
       <div className="flex flex-1 min-w-0 overflow-hidden">
-        <main className={`flex-1 p-4 md:p-8 min-w-0 w-full flex flex-col ${currentView === 'dropzone' ? 'overflow-hidden h-[100dvh]' : 'overflow-y-auto h-screen relative'}`}>
+        <main className={`flex-1 p-4 md:p-8 min-w-0 w-full flex flex-col ${['dropzone', 'quick-clip', 'tracker'].includes(currentView) ? 'overflow-hidden h-full' : 'overflow-y-auto h-full relative'}`}>
           <header className="flex flex-col gap-4 mb-6 shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20 pt-2">
             <div className="flex items-center justify-between md:hidden">
               <div className="flex items-center gap-2">

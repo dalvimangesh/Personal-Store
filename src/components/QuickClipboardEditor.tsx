@@ -25,6 +25,18 @@ interface SharedUser {
     username: string;
 }
 
+const rgbToHex = (rgb: string) => {
+    if (!rgb || rgb === 'inherit' || rgb === 'initial' || rgb === 'transparent' || !rgb.startsWith('rgb')) return rgb;
+    const match = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/);
+    if (!match) return rgb;
+    const r = parseInt(match[1]);
+    const g = parseInt(match[2]);
+    const b = parseInt(match[3]);
+    // If it's transparent (alpha is 0), return inherit
+    if (match[4] === '0') return 'inherit';
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toLowerCase();
+};
+
 interface Clipboard {
   _id?: string;
   name: string;
@@ -41,7 +53,7 @@ interface Clipboard {
 }
 
 const COLORS = [
-    { name: "Default", value: "inherit", class: "bg-foreground" },
+    { name: "Default", value: "inherit", class: "bg-transparent border-2 border-dashed border-muted-foreground/60" },
     { name: "Blue", value: "#3b82f6", class: "bg-blue-500" },
     { name: "Red", value: "#ef4444", class: "bg-red-500" },
     { name: "Green", value: "#22c55e", class: "bg-green-500" },
@@ -49,6 +61,8 @@ const COLORS = [
     { name: "Orange", value: "#f97316", class: "bg-orange-500" },
     { name: "Cyan", value: "#06b6d4", class: "bg-cyan-500" },
     { name: "Pink", value: "#ec4899", class: "bg-pink-500" },
+    { name: "Black", value: "#000000", class: "bg-black" },
+    { name: "White", value: "#ffffff", class: "bg-white border border-border" },
 ];
 
 export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster = false }: { isPrivacyMode?: boolean, showHiddenMaster?: boolean }) {
@@ -85,65 +99,65 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
         } else {
           toast.error("Failed to load Quick Clipboard");
         }
-      } catch (error) {
-        console.error("Error fetching quick clip:", error);
-        toast.error("Failed to connect to server");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchContent();
-  }, [showHiddenMaster]);
-
-  const saveClipboards = useCallback(async (newClipboards: Clipboard[], specificIndex?: number) => {
-    setIsSaving(true);
-    try {
-        // If specific index provided, optimize for single clipboard update (especially for shared ones)
-        if (specificIndex !== undefined) {
-            const targetClip = newClipboards[specificIndex];
-            if (targetClip.isOwner === false) {
-                // Updating shared clipboard
-                const res = await fetch("/api/quick-clip/clipboard", {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        clipboardId: targetClip._id,
-                        ownerId: targetClip.ownerId,
-                        clipboard: {
-                            name: targetClip.name,
-                            content: targetClip.content,
-                            isHidden: targetClip.isHidden,
-                            isBold: targetClip.isBold,
-                            color: targetClip.color
-                        }
-                    }),
-                });
-                if (!res.ok) throw new Error("Failed to update shared clipboard");
-                setIsSaving(false);
-                return;
-            }
-        }
-
-      // Default: save all owned clipboards
-      const ownedClipboards = newClipboards.filter(c => c.isOwner !== false);
-      
-      const res = await fetch("/api/quick-clip", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clipboards: ownedClipboards }),
-      });
-      
-      if (!res.ok) {
-        throw new Error("Failed to save");
-      }
-    } catch (error) {
-      console.error("Error saving quick clip:", error);
-      toast.error("Failed to save changes");
+    } catch (err) {
+      console.error("Error fetching quick clip:", err);
+      toast.error("Failed to connect to server");
     } finally {
-      setIsSaving(false);
+      setIsLoading(false);
     }
-  }, []);
+  };
+
+  fetchContent();
+}, [showHiddenMaster]);
+
+const saveClipboards = useCallback(async (newClipboards: Clipboard[], specificIndex?: number) => {
+  setIsSaving(true);
+  try {
+      // If specific index provided, optimize for single clipboard update (especially for shared ones)
+      if (specificIndex !== undefined) {
+          const targetClip = newClipboards[specificIndex];
+          if (targetClip.isOwner === false) {
+              // Updating shared clipboard
+              const res = await fetch("/api/quick-clip/clipboard", {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                      clipboardId: targetClip._id,
+                      ownerId: targetClip.ownerId,
+                      clipboard: {
+                          name: targetClip.name,
+                          content: targetClip.content,
+                          isHidden: targetClip.isHidden,
+                          isBold: targetClip.isBold,
+                          color: targetClip.color
+                      }
+                  }),
+              });
+              if (!res.ok) throw new Error("Failed to update shared clipboard");
+              setIsSaving(false);
+              return;
+          }
+      }
+
+    // Default: save all owned clipboards
+    const ownedClipboards = newClipboards.filter(c => c.isOwner !== false);
+    
+    const res = await fetch("/api/quick-clip", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clipboards: ownedClipboards }),
+    });
+    
+    if (!res.ok) {
+      throw new Error("Failed to save");
+    }
+  } catch (err) {
+    console.error("Error saving quick clip:", err);
+    toast.error("Failed to save changes");
+  } finally {
+    setIsSaving(false);
+  }
+}, []);
 
   const debouncedSave = useCallback((newClipboards: Clipboard[], changedIndex?: number) => {
     if (timeoutRef.current) {
@@ -163,7 +177,7 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
             editorRef.current.innerHTML = clipboards[activeTab].content || "";
         }
     }
-  }, [activeTab]);
+  }, [activeTab, clipboards]);
 
   const handleContentChange = useCallback(() => {
     if (!editorRef.current) return;
@@ -186,7 +200,8 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
     setIsBoldActive(document.queryCommandState('bold'));
     const color = document.queryCommandValue('foreColor');
     // Convert rgb to hex if needed or just use it
-    setCurrentColor(color || "inherit");
+    const normalizedColor = rgbToHex(color);
+    setCurrentColor(normalizedColor || "inherit");
   }, []);
 
   useEffect(() => {
@@ -199,7 +214,54 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
     return () => document.removeEventListener('selectionchange', handleSelectionChange);
   }, [updateSelectionState]);
 
+  const toggleBold = useCallback(() => {
+    document.execCommand('bold', false);
+    updateSelectionState();
+    handleContentChange();
+    editorRef.current?.focus();
+  }, [handleContentChange, updateSelectionState]);
+
+  const handleColorChange = useCallback((color: string) => {
+    // Ensure we use CSS for styling to support 'inherit'
+    document.execCommand('styleWithCSS', false, "true");
+    
+    if (color === 'inherit') {
+        document.execCommand('foreColor', false, 'inherit');
+    } else {
+        document.execCommand('foreColor', false, color);
+    }
+    updateSelectionState();
+    handleContentChange();
+    editorRef.current?.focus();
+  }, [handleContentChange, updateSelectionState]);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Bold shortcut: Ctrl+B or Cmd+B
+    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        toggleBold();
+        return;
+    }
+
+    // Color shortcut: Ctrl+Shift+C (cycles common colors)
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        const normalizedCurrent = rgbToHex(currentColor).toLowerCase();
+        let currentIndex = COLORS.findIndex(c => c.value.toLowerCase() === normalizedCurrent);
+        
+        if (currentIndex === -1) {
+            if (normalizedCurrent === 'inherit' || normalizedCurrent === 'initial' || normalizedCurrent === '') {
+                currentIndex = 0;
+            } else {
+                currentIndex = -1;
+            }
+        }
+        
+        const nextIndex = (currentIndex + 1) % COLORS.length;
+        handleColorChange(COLORS[nextIndex].value);
+        return;
+    }
+
     if (e.key === 'Tab') {
         e.preventDefault();
         
@@ -233,21 +295,7 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
         }
         handleContentChange();
     }
-  }, [handleContentChange]);
-
-  const toggleBold = useCallback(() => {
-    document.execCommand('bold', false);
-    updateSelectionState();
-    handleContentChange();
-    editorRef.current?.focus();
-  }, [handleContentChange, updateSelectionState]);
-
-  const handleColorChange = useCallback((color: string) => {
-    document.execCommand('foreColor', false, color === 'inherit' ? 'inherit' : color);
-    updateSelectionState();
-    handleContentChange();
-    editorRef.current?.focus();
-  }, [handleContentChange, updateSelectionState]);
+  }, [handleContentChange, toggleBold, currentColor, handleColorChange]);
 
   const handleNameChange = useCallback((newName: string, index: number) => {
     setClipboards(prev => {
@@ -306,7 +354,8 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
           } else {
               toast.error("Failed to leave clipboard");
           }
-      } catch (error) {
+      } catch (err) {
+          console.error(err);
           toast.error("Error leaving clipboard");
       }
   }, []);
@@ -381,7 +430,8 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
           } else {
               toast.error(data.error || "Failed to add user");
           }
-      } catch (error) {
+      } catch (err) {
+          console.error(err);
           toast.error("Error adding user");
       } finally {
           setIsSharing(false);
@@ -416,7 +466,8 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
           } else {
               toast.error("Failed to remove user");
           }
-      } catch (error) {
+      } catch (err) {
+          console.error(err);
           toast.error("Error removing user");
       } finally {
           setIsSharing(false);
@@ -451,7 +502,8 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
           } else {
               toast.error(data.error || "Failed to toggle public link");
           }
-      } catch (error) {
+      } catch (err) {
+          console.error(err);
           toast.error("Error toggling public link");
       } finally {
           setIsSharing(false);
@@ -524,7 +576,7 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
                                 className="h-7 w-7 rounded-sm text-muted-foreground hover:text-foreground"
                                 title="Text color"
                             >
-                                <Palette className="h-4 w-4" style={{ color: currentColor !== 'inherit' ? currentColor : undefined }} />
+                                <Palette className="h-4 w-4" style={{ color: (currentColor !== 'inherit' && currentColor !== 'initial') ? currentColor : undefined }} />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="grid grid-cols-4 gap-1 p-2 min-w-0">
@@ -574,7 +626,7 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
         </div>
         
         <div className={cn(
-            "flex-1 relative border-2 rounded-lg overflow-hidden focus-within:border-ring/50 transition-colors bg-background"
+            "flex-1 relative border-2 rounded-lg overflow-hidden focus-within:border-ring/50 transition-colors bg-background flex flex-col"
         )}>
             <div
                 ref={editorRef}
@@ -582,7 +634,7 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
                 onInput={handleContentChange}
                 onKeyDown={handleKeyDown}
                 className={cn(
-                    "flex-1 p-4 min-h-full w-full outline-none font-mono text-sm leading-relaxed overflow-auto whitespace-pre-wrap break-words",
+                    "flex-1 p-4 w-full outline-none font-mono text-sm leading-relaxed overflow-auto whitespace-pre-wrap break-words",
                     isPrivacyMode ? "blur-sm hover:blur-none transition-all duration-300" : "",
                     !activeClipboard.content && "before:content-[attr(data-placeholder)] before:text-muted-foreground before:pointer-events-none"
                 )}
@@ -598,7 +650,7 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
         <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Share "{activeClipboard.name}"</DialogTitle>
+                    <DialogTitle>Share &quot;{activeClipboard.name}&quot;</DialogTitle>
                     <DialogDescription>
                         Manage access and public links.
                     </DialogDescription>
@@ -712,6 +764,18 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
   );
 }
 
+interface ClipboardTabProps {
+    clip: Clipboard;
+    index: number;
+    isActive: boolean;
+    isPrivacyMode: boolean;
+    setActiveTab: (index: number) => void;
+    handleNameChange: (newName: string, index: number) => void;
+    toggleHideClipboard: (e: React.MouseEvent, index: number) => void;
+    handleDeleteClipboard: (e: React.MouseEvent, index: number) => void;
+    clipboardsCount: number;
+}
+
 const ClipboardTab = memo(function ClipboardTab({
     clip,
     index,
@@ -722,7 +786,7 @@ const ClipboardTab = memo(function ClipboardTab({
     toggleHideClipboard,
     handleDeleteClipboard,
     clipboardsCount
-}: any) {
+}: ClipboardTabProps) {
     const clipIsShared = clip.isOwner === false;
     
     return (
