@@ -60,6 +60,8 @@ export async function GET() {
                 name: decrypt(clip.name),
                 content: decrypt(clip.content),
                 isHidden: clip.isHidden === true,
+                isBold: clip.isBold === true,
+                color: clip.color || "inherit",
                 isOwner: true,
                 ownerId: userId,
                 sharedWith: sharedWithUsers.map(u => ({ userId: u._id, username: u.username }))
@@ -99,6 +101,8 @@ export async function GET() {
                 name: decrypt(clip.name),
                 content: decrypt(clip.content),
                 isHidden: clip.isHidden === true,
+                isBold: clip.isBold === true,
+                color: clip.color || "inherit",
                 isOwner: false,
                 ownerId: ownerId,
                 ownerUsername: ownerUsername,
@@ -154,6 +158,8 @@ export async function POST(request: Request) {
         name: encrypt(clip.name || "New Clipboard"),
         content: encrypt(clip.content || ""),
         isHidden: clip.isHidden || false,
+        isBold: clip.isBold || false,
+        color: clip.color || "inherit",
         // Preserve sharedWith IDs
         sharedWith: clip.sharedWith ? clip.sharedWith.map((u: any) => u.userId || u) : []
     }));
@@ -175,6 +181,8 @@ export async function POST(request: Request) {
         name: decrypt(clip.name),
         content: decrypt(clip.content),
         isHidden: clip.isHidden === true,
+        isBold: clip.isBold === true,
+        color: clip.color || "inherit",
         isOwner: true,
         ownerId: userId,
         sharedWith: (clip.sharedWith || []).map((id: any) => ({ userId: id })) 

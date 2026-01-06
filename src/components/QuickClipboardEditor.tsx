@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, memo, useCallback } from "react";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, Plus, X, Users, Shield, LogOut, UserPlus, UserMinus, Globe, Copy, ExternalLink, Eye, EyeOff } from "lucide-react";
+import { Loader2, Plus, X, Users, Shield, LogOut, UserPlus, UserMinus, Globe, Copy, ExternalLink, Eye, EyeOff, Bold, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
     Dialog,
@@ -12,6 +11,12 @@ import {
     DialogTitle,
     DialogDescription,
 } from "@/components/ui/dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 
@@ -25,6 +30,8 @@ interface Clipboard {
   name: string;
   content: string;
   isHidden?: boolean;
+  isBold?: boolean;
+  color?: string;
   isOwner?: boolean;
   ownerId?: string;
   ownerUsername?: string;
@@ -32,6 +39,17 @@ interface Clipboard {
   isPublic?: boolean;
   publicToken?: string;
 }
+
+const COLORS = [
+    { name: "Default", value: "inherit", class: "bg-foreground" },
+    { name: "Blue", value: "#3b82f6", class: "bg-blue-500" },
+    { name: "Red", value: "#ef4444", class: "bg-red-500" },
+    { name: "Green", value: "#22c55e", class: "bg-green-500" },
+    { name: "Purple", value: "#a855f7", class: "bg-purple-500" },
+    { name: "Orange", value: "#f97316", class: "bg-orange-500" },
+    { name: "Cyan", value: "#06b6d4", class: "bg-cyan-500" },
+    { name: "Pink", value: "#ec4899", class: "bg-pink-500" },
+];
 
 export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster = false }: { isPrivacyMode?: boolean, showHiddenMaster?: boolean }) {
   const [clipboards, setClipboards] = useState<Clipboard[]>([]);
@@ -95,7 +113,9 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
                         clipboard: {
                             name: targetClip.name,
                             content: targetClip.content,
-                            isHidden: targetClip.isHidden
+                            isHidden: targetClip.isHidden,
+                            isBold: targetClip.isBold,
+                            color: targetClip.color
                         }
                     }),
                 });
@@ -134,9 +154,23 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
     }, 1000);
   }, [saveClipboards]);
 
-  const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Synchronize editor content when tab changes
+    if (editorRef.current && clipboards[activeTab]) {
+        if (editorRef.current.innerHTML !== clipboards[activeTab].content) {
+            editorRef.current.innerHTML = clipboards[activeTab].content || "";
+        }
+    }
+  }, [activeTab]);
+
+  const handleContentChange = useCallback(() => {
+    if (!editorRef.current) return;
+    const newContent = editorRef.current.innerHTML;
+    
     setClipboards(prev => {
+        if (prev[activeTab].content === newContent) return prev;
         const newClipboards = [...prev];
         newClipboards[activeTab] = { ...newClipboards[activeTab], content: newContent };
         setIsSaving(true);
@@ -144,6 +178,76 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
         return newClipboards;
     });
   }, [activeTab, debouncedSave]);
+
+  const [isBoldActive, setIsBoldActive] = useState(false);
+  const [currentColor, setCurrentColor] = useState("inherit");
+
+  const updateSelectionState = useCallback(() => {
+    setIsBoldActive(document.queryCommandState('bold'));
+    const color = document.queryCommandValue('foreColor');
+    // Convert rgb to hex if needed or just use it
+    setCurrentColor(color || "inherit");
+  }, []);
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+        if (document.activeElement === editorRef.current) {
+            updateSelectionState();
+        }
+    };
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, [updateSelectionState]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        
+        if (e.shiftKey) {
+            // Shift + Tab: Remove 4 spaces or a tab
+            const selection = window.getSelection();
+            if (!selection || selection.rangeCount === 0) return;
+            
+            const range = selection.getRangeAt(0);
+            const container = range.startContainer;
+            
+            if (container.nodeType === Node.TEXT_NODE) {
+                const text = container.textContent || "";
+                const before = text.substring(0, range.startOffset);
+                const after = text.substring(range.startOffset);
+                
+                // Look for 4 spaces or a tab before the cursor
+                if (before.endsWith('    ')) {
+                    container.textContent = before.substring(0, before.length - 4) + after;
+                    range.setStart(container, Math.max(0, range.startOffset - 4));
+                    range.setEnd(container, Math.max(0, range.startOffset - 4));
+                } else if (before.endsWith('\t')) {
+                    container.textContent = before.substring(0, before.length - 1) + after;
+                    range.setStart(container, Math.max(0, range.startOffset - 1));
+                    range.setEnd(container, Math.max(0, range.startOffset - 1));
+                }
+            }
+        } else {
+            // Tab: Insert 4 spaces
+            document.execCommand('insertHTML', false, '    ');
+        }
+        handleContentChange();
+    }
+  }, [handleContentChange]);
+
+  const toggleBold = useCallback(() => {
+    document.execCommand('bold', false);
+    updateSelectionState();
+    handleContentChange();
+    editorRef.current?.focus();
+  }, [handleContentChange, updateSelectionState]);
+
+  const handleColorChange = useCallback((color: string) => {
+    document.execCommand('foreColor', false, color === 'inherit' ? 'inherit' : color);
+    updateSelectionState();
+    handleContentChange();
+    editorRef.current?.focus();
+  }, [handleContentChange, updateSelectionState]);
 
   const handleNameChange = useCallback((newName: string, index: number) => {
     setClipboards(prev => {
@@ -398,6 +502,46 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
             </div>
             
             <div className="flex items-center shrink-0 gap-2">
+                <div className="flex items-center bg-muted/30 rounded-md px-1 mr-1">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className={cn(
+                            "h-7 w-7 rounded-sm",
+                            isBoldActive ? "bg-muted text-foreground" : "text-muted-foreground"
+                        )}
+                        onClick={toggleBold}
+                        title="Bold selection"
+                    >
+                        <Bold className="h-4 w-4" />
+                    </Button>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 rounded-sm text-muted-foreground hover:text-foreground"
+                                title="Text color"
+                            >
+                                <Palette className="h-4 w-4" style={{ color: currentColor !== 'inherit' ? currentColor : undefined }} />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="grid grid-cols-4 gap-1 p-2 min-w-0">
+                            {COLORS.map((color) => (
+                                <DropdownMenuItem
+                                    key={color.value}
+                                    className="p-0 h-6 w-6 rounded-full cursor-pointer overflow-hidden border border-border"
+                                    onClick={() => handleColorChange(color.value)}
+                                    title={color.name}
+                                >
+                                    <div className={cn("h-full w-full", color.class)} style={color.value !== 'inherit' ? { backgroundColor: color.value } : {}} />
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+
                 {isOwner && activeClipboard._id && (
                      <Button 
                         variant="ghost" 
@@ -430,16 +574,19 @@ export function QuickClipboardEditor({ isPrivacyMode = false, showHiddenMaster =
         </div>
         
         <div className={cn(
-            "flex-1 relative border-2 rounded-lg overflow-hidden focus-within:border-ring/50 transition-colors"
+            "flex-1 relative border-2 rounded-lg overflow-hidden focus-within:border-ring/50 transition-colors bg-background"
         )}>
-            <Textarea
-                value={activeClipboard.content}
-                onChange={handleContentChange}
-                placeholder="Type or paste anything here..."
+            <div
+                ref={editorRef}
+                contentEditable
+                onInput={handleContentChange}
+                onKeyDown={handleKeyDown}
                 className={cn(
-                    "flex-1 resize-none font-mono text-sm p-4 leading-relaxed border-0 focus-visible:ring-0 h-full w-full rounded-none",
-                    isPrivacyMode ? "blur-sm hover:blur-none transition-all duration-300" : ""
+                    "flex-1 p-4 min-h-full w-full outline-none font-mono text-sm leading-relaxed overflow-auto whitespace-pre-wrap break-words",
+                    isPrivacyMode ? "blur-sm hover:blur-none transition-all duration-300" : "",
+                    !activeClipboard.content && "before:content-[attr(data-placeholder)] before:text-muted-foreground before:pointer-events-none"
                 )}
+                data-placeholder="Type or paste anything here..."
                 spellCheck={false}
             />
         </div>
