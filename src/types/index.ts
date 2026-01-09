@@ -1,3 +1,36 @@
+export interface CommandVariable {
+  name: string;
+  description: string;
+  defaultValue: string;
+}
+
+export interface CommandStep {
+  order: number;
+  instruction: string;
+  command?: string;
+  warning?: string;
+}
+
+export interface TerminalCommand {
+  id: string;
+  title: string;
+  command?: string; // Legacy/Simple mode
+  description: string;
+  category: string;
+  os: 'linux' | 'mac' | 'windows' | 'all';
+  tags: string[];
+  steps: CommandStep[];
+  variables: CommandVariable[];
+  userId: string;
+  sharedWith?: { userId: string; username: string }[];
+  isPublic?: boolean;
+  publicToken?: string;
+  isOwner?: boolean;
+  author?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Snippet {
   id: string;
   title: string;
