@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { TerminalCommand } from '@/types';
 
 export function useTerminalCommands() {
@@ -6,15 +6,19 @@ export function useTerminalCommands() {
   const [categoryConfigs, setCategoryConfigs] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const hasLoaded = useRef(false);
 
   const fetchCommands = useCallback(async () => {
     try {
-      setIsLoading(true);
+      if (!hasLoaded.current) {
+        setIsLoading(true);
+      }
       const res = await fetch('/api/terminal');
       const data = await res.json();
       if (data.success) {
         setCommands(data.data);
         setCategoryConfigs(data.categories || []);
+        hasLoaded.current = true;
       }
     } catch (error) {
       console.error('Failed to fetch commands:', error);

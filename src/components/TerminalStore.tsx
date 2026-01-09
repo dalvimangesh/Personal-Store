@@ -10,7 +10,7 @@ import {
   Monitor, Apple, Command, ChevronRight, ChevronDown,
   Settings2, Play, Hash, FolderOpen, Save, X, Layers, AlertTriangle, ArrowRight,
   ArrowLeft, Share2, Globe, UserPlus, UserMinus, Shield, ExternalLink, Download,
-  Check, ChevronsUpDown
+  Check, ChevronsUpDown, LogOut
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -86,6 +86,21 @@ export function TerminalStore({ searchQuery = "", isPrivacyMode = false }: Termi
     if (!shareCategoryMode || !shareTargetName) return null;
     return categoryConfigs.find((c: any) => c.name === shareTargetName) || null;
   }, [categoryConfigs, shareCategoryMode, shareTargetName]);
+
+  const categorySharedUsers = useMemo(() => {
+      if (!shareCategoryMode || !shareTargetName) return [];
+      // Use full commands list to find all users shared on any command in this category
+      const relevantCommands = commands.filter(c => c.category === shareTargetName);
+      const userMap = new Map();
+      relevantCommands.forEach(cmd => {
+          cmd.sharedWith?.forEach((u: any) => {
+              if (!userMap.has(u.userId)) {
+                  userMap.set(u.userId, u);
+              }
+          });
+      });
+      return Array.from(userMap.values());
+  }, [commands, shareCategoryMode, shareTargetName]);
 
   // Form State
   const [formData, setFormData] = useState<{
@@ -282,14 +297,14 @@ export function TerminalStore({ searchQuery = "", isPrivacyMode = false }: Termi
     }
   };
 
-  const handleShareAction = async (action: 'add' | 'remove' | 'leave' | 'public_toggle' | 'share_category' | 'unshare_category', specificUsername?: string) => {
+  const handleShareAction = async (action: 'add' | 'remove' | 'leave' | 'public_toggle' | 'share_category' | 'unshare_category' | 'leave_category', specificUsername?: string, specificCategoryName?: string) => {
       setIsSharing(true);
       try {
           const body: any = { action };
           const userToUse = specificUsername || shareUsername;
           
-          if (shareCategoryMode) {
-              body.categoryName = shareTargetName;
+          if (specificCategoryName || shareCategoryMode) {
+              body.categoryName = specificCategoryName || shareTargetName;
               body.username = userToUse;
           } else {
               if (!selectedCommandId) return;
@@ -360,7 +375,11 @@ export function TerminalStore({ searchQuery = "", isPrivacyMode = false }: Termi
                     </div>
                 ) : (
                     <Accordion type="multiple" defaultValue={Object.keys(groupedCommands)} className="w-full space-y-1">
-                        {Object.entries(groupedCommands).map(([category, cmds]) => (
+                        {Object.entries(groupedCommands).map(([category, cmds]) => {
+                            const hasOwnedCommands = cmds.some(c => c.isOwner);
+                            const hasSharedCommands = cmds.some(c => !c.isOwner);
+                            
+                            return (
                             <AccordionItem key={category} value={category} className="border-none">
                                 <div className="flex items-center group/cat hover:bg-muted/50 rounded-md pr-2 transition-colors">
                                     <AccordionTrigger className="py-1.5 px-2 hover:bg-transparent hover:no-underline rounded-md text-sm font-medium text-muted-foreground hover:text-foreground flex-1">
@@ -370,22 +389,40 @@ export function TerminalStore({ searchQuery = "", isPrivacyMode = false }: Termi
                                         </span>
                                     </AccordionTrigger>
                                     <div 
-                                        className="opacity-0 group-hover/cat:opacity-100 transition-opacity"
+                                        className="opacity-0 group-hover/cat:opacity-100 transition-opacity flex items-center gap-1"
                                     >
-                                        <Button
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-6 w-6 text-muted-foreground hover:text-foreground" 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setShareCategoryMode(true);
-                                                setShareTargetName(category);
-                                                setShareDialogOpen(true);
-                                            }}
-                                            title="Share Category"
-                                        >
-                                            <Share2 className="h-3 w-3" />
-                                        </Button>
+                                        {hasOwnedCommands && (
+                                            <Button
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-6 w-6 text-muted-foreground hover:text-foreground" 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setShareCategoryMode(true);
+                                                    setShareTargetName(category);
+                                                    setShareDialogOpen(true);
+                                                }}
+                                                title="Share Category"
+                                            >
+                                                <Share2 className="h-3 w-3" />
+                                            </Button>
+                                        )}
+                                        {hasSharedCommands && (
+                                            <Button
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-6 w-6 text-muted-foreground hover:text-destructive" 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (confirm(`Are you sure you want to leave the shared category "${category}"?`)) {
+                                                        handleShareAction('leave_category', undefined, category);
+                                                    }
+                                                }}
+                                                title="Leave Shared Category"
+                                            >
+                                                <LogOut className="h-3 w-3" />
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
                                 <AccordionContent className="pb-0 pt-0.5">
@@ -419,7 +456,7 @@ export function TerminalStore({ searchQuery = "", isPrivacyMode = false }: Termi
                                     </div>
                                 </AccordionContent>
                             </AccordionItem>
-                        ))}
+                        ); })}
                     </Accordion>
                 )}
             </div>
@@ -998,20 +1035,34 @@ export function TerminalStore({ searchQuery = "", isPrivacyMode = false }: Termi
                         )}
                         
                          {shareCategoryMode && (
-                            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded text-sm">
-                                <p>Sharing a category will add the user to all <strong>current</strong> commands in this category.</p>
-                                <p className="mt-2 text-xs opacity-80">To remove a user from a category, use the &quot;Unshare&quot; action below (requires typing username).</p>
-                                <div className="mt-4 flex justify-end">
-                                     <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        onClick={() => handleShareAction('unshare_category')}
-                                        disabled={!shareUsername || isSharing}
-                                        className="border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/20"
-                                     >
-                                         Unshare from Category
-                                     </Button>
-                                </div>
+                            <div className="flex flex-col gap-2 mt-2">
+                                <Label>Shared with</Label>
+                                {categorySharedUsers.length > 0 ? (
+                                    <div className="flex flex-col gap-2">
+                                        {categorySharedUsers.map((user: any) => (
+                                            <div key={user.userId} className="flex items-center justify-between p-2 border rounded-md bg-muted/50">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
+                                                        {user.username[0].toUpperCase()}
+                                                    </div>
+                                                    <span className="text-sm font-medium">{user.username}</span>
+                                                </div>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-7 w-7 text-muted-foreground hover:text-destructive" 
+                                                    onClick={() => handleShareAction('unshare_category', user.username)} 
+                                                    disabled={isSharing}
+                                                    title="Remove from category"
+                                                >
+                                                    <UserMinus className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground italic">Not shared with anyone yet.</p>
+                                )}
                             </div>
                         )}
                     </div>

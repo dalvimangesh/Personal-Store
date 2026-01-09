@@ -74,6 +74,17 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true });
     }
 
+    if (action === 'leave_category') {
+        if (!categoryName) return NextResponse.json({ error: "Category name required" }, { status: 400 });
+
+        // Remove user from all commands in this category where they are in sharedWith
+        await TerminalCommand.updateMany(
+            { category: categoryName, sharedWith: userId },
+            { $pull: { sharedWith: userId } }
+        );
+        return NextResponse.json({ success: true });
+    }
+
     // Handle Individual Command Sharing
     if (!commandId) {
         return NextResponse.json({ error: "Command ID required" }, { status: 400 });
