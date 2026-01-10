@@ -213,6 +213,10 @@ export async function POST(request: Request) {
                 await DeletedItem.insertMany(
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 deletedItems.map((item: any) => {
+                     const itemObj = item.toObject ? item.toObject() : item;
+                     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                     const { _id, userId: _uid, __v, ...itemContent } = itemObj;
+
                      // Need to decrypt before saving to trash, as trash expects plain text or handles its own view
                      // But wait, the items in DB are encrypted.
                      // We should decrypt them so they are readable in trash store.
@@ -221,9 +225,11 @@ export async function POST(request: Request) {
                         originalId: item._id.toString(),
                         type: 'link',
                         content: { 
+                            ...itemContent,
                             title: item.label ? decrypt(item.label) : "No Label", 
                             content: item.value ? decrypt(item.value) : "",
-                            // Store other metadata if needed
+                            label: item.label ? decrypt(item.label) : "",
+                            value: item.value ? decrypt(item.value) : "",
                         }
                     };
                 })

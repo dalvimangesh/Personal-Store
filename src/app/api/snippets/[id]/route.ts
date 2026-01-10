@@ -81,14 +81,18 @@ export async function DELETE(
     }
 
     // Move to trash
+    const snippetObj = snippet.toObject();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { _id, userId: _uid, __v, ...snippetContent } = snippetObj;
+
     await DeletedItem.create({
       userId: session.userId,
       originalId: id,
       type: 'snippet',
       content: {
-        title: snippet.title,
-        content: snippet.content,
-        ...snippet.toObject()
+        ...snippetContent,
+        title: decrypt(snippet.title),
+        content: decrypt(snippet.content),
       },
     });
 

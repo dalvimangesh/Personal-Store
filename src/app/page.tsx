@@ -5,6 +5,23 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame, SquareKanban, Activity, Terminal } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +35,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+
 import { useSnippets } from "@/hooks/useSnippets";
 import { useSharedSnippets } from "@/hooks/useSharedSnippets";
 import { Snippet, SharedSnippet } from "@/types";
@@ -33,7 +53,6 @@ import { HabitStore } from "@/components/HabitStore";
 import { TrackerStore } from "@/components/TrackerStore";
 import { TerminalStore } from "@/components/TerminalStore";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
-import { Inbox, Info } from "lucide-react";
 import { FeaturesList } from "@/components/FeaturesList";
 import { SecretCreator } from "@/components/SecretCreator";
 import { ModeToggle } from "@/components/ModeToggle";
@@ -47,23 +66,43 @@ const PrivacyContext = createContext<{
   togglePrivacyMode: () => {},
 });
 
-  interface TagSidebarProps {
+const STORE_ITEMS = [
+    { id: 'quick-clip', label: 'Clipboard Store', icon: Clipboard },
+    { id: 'todo', label: 'Todo Store', icon: ListTodo },
+    { id: 'tracker', label: 'Tracking Store', icon: SquareKanban },
+    { id: 'habit', label: 'Habit Store', icon: Activity },
+    { id: 'steps', label: 'Steps Store', icon: Footprints },
+    { id: 'link-share', label: 'Link Store', icon: Link2 },
+    { id: 'dropzone', label: 'Drop Store', icon: Inbox },
+    { id: 'public-store', label: 'Public Store', icon: Globe },
+    { id: 'secret-store', label: 'Secret Store', icon: Flame },
+    { id: 'trash', label: 'Trash Store', icon: Trash2 },
+    { id: 'snippets', label: 'Snippet Store', icon: StickyNote },
+] as const;
+
+type ViewType = 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit' | 'steps';
+
+interface TagSidebarProps {
   uniqueTags: string[];
   selectedTag: string | null;
   showHidden: boolean;
   currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit' | 'terminal';
   isPrivacyMode: boolean;
+  visibleStores: Record<string, boolean>;
+  orderedStores: string[];
   onSelectTag: (tag: string | null) => void;
   onToggleHidden: (show: boolean) => void;
   onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit' | 'terminal') => void;
 }
 
-const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivacyMode, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
+const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivacyMode, visibleStores, orderedStores, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
   <div className="space-y-4">
     <div className="px-3 py-2">
-      <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-        Menu
-      </h2>
+      <div className="flex items-center justify-between mb-2 px-4">
+          <h2 className="text-lg font-semibold tracking-tight">
+            Menu
+          </h2>
+      </div>
       <div className="space-y-1">
         <Button
             variant={currentView === 'quick-clip' ? "secondary" : "ghost"}
@@ -195,11 +234,48 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivac
   </div>
 );
 
+function SortableStoreItem({ id, visible, onToggle }: { id: string; visible: boolean; onToggle: () => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const store = STORE_ITEMS.find(s => s.id === id);
+  if (!store) return null;
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-3 border p-3 rounded-lg bg-card shadow-sm select-none group">
+        <div {...attributes} {...listeners} className="cursor-grab hover:text-foreground text-muted-foreground touch-none">
+            <GripVertical className="h-5 w-5" />
+        </div>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+             <Checkbox 
+                id={`sort-store-${id}`} 
+                checked={visible}
+                onCheckedChange={onToggle}
+            />
+            <Label htmlFor={`sort-store-${id}`} className="flex items-center gap-2 cursor-pointer truncate font-medium">
+                <store.icon className="h-4 w-4 text-muted-foreground" />
+                {store.label}
+            </Label>
+        </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
   const {
     snippets,
-    searchQuery,
+    // searchQuery,
     setSearchQuery,
     addSnippet,
     updateSnippet,
@@ -208,7 +284,7 @@ export default function Home() {
 
   const {
     snippets: sharedSnippets,
-    searchQuery: sharedSearchQuery,
+    // searchQuery: sharedSearchQuery,
     setSearchQuery: setSharedSearchQuery,
     addSnippet: addSharedSnippet,
     updateSnippet: updateSharedSnippet,
@@ -433,6 +509,8 @@ export default function Home() {
                 showHidden={showHidden}
                 currentView={currentView}
                 isPrivacyMode={isPrivacyMode}
+                visibleStores={visibleStores}
+                orderedStores={orderedStores}
                 onSelectTag={setSelectedTag} 
                 onToggleHidden={(hidden) => {
                     setShowHidden(hidden);
@@ -498,6 +576,8 @@ export default function Home() {
                         showHidden={showHidden}
                         currentView={currentView}
                         isPrivacyMode={isPrivacyMode}
+                        visibleStores={visibleStores}
+                        orderedStores={orderedStores}
                         onSelectTag={(tag) => {
                             setSelectedTag(tag);
                             setShowHidden(false);
