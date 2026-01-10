@@ -18,7 +18,8 @@ import {
   Globe,
   SquareKanban,
   Activity,
-  Trash2
+  Trash2,
+  Footprints
 } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 import { Button } from "@/components/ui/button";
@@ -75,9 +76,9 @@ const features = [
     description: "Build and maintain positive daily routines."
   },
   {
-    icon: <Trash2 className="h-5 w-5 text-muted-foreground" />,
-    title: "Trash Store",
-    description: "A safety net for your deleted items."
+    icon: <Footprints className="h-5 w-5 text-slate-500" />,
+    title: "Steps Store",
+    description: "Document and execute complex multi-step procedures."
   },
 ];
 
@@ -177,14 +178,14 @@ export default function LoginPage() {
       </nav>
 
       {/* Hero Section */}
-      <main className="flex-1 overflow-y-auto lg:overflow-hidden flex flex-col items-center justify-center px-6 py-4">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center max-w-7xl w-full">
+      <main className="flex-1 overflow-y-auto flex flex-col items-center px-6 py-4">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center max-w-7xl w-full my-auto">
           
           {/* Left: Content */}
           <div className="space-y-6 animate-in fade-in slide-in-from-left duration-1000">
             <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                <Sparkles className="h-3 w-3" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium max-w-full">
+                <Sparkles className="h-3 w-3 shrink-0" />
                 <span>Your Digital Vault, Simplified</span>
               </div>
               <h1 className="text-4xl md:text-6xl font-extrabold tracking-tighter leading-tight">

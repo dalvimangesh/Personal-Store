@@ -48,15 +48,18 @@ export async function DELETE(
     }
 
     // Move to trash
+    const todoObj = foundTodo.toObject ? foundTodo.toObject() : foundTodo;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { _id, userId: _uid, __v, ...todoContent } = todoObj;
+
     await DeletedItem.create({
       userId,
       originalId: id,
       type: 'todo',
       content: {
-        ...foundTodo.toObject ? foundTodo.toObject() : foundTodo,
+        ...todoContent,
         title: decrypt(foundTodo.title),
         description: foundTodo.description ? decrypt(foundTodo.description) : undefined,
-        userId // Include userId for compatibility
       },
     });
 

@@ -15,7 +15,7 @@ import {
     AccordionTrigger,
 } from "@/components/ui/accordion";
 
-export default function PublicTerminalCategoryPage({ params }: { params: Promise<{ token: string }> }) {
+export default function PublicStepsCategoryPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const [data, setData] = useState<{ name: string; author: string; commands: TerminalCommand[] } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,7 @@ export default function PublicTerminalCategoryPage({ params }: { params: Promise
   useEffect(() => {
     const fetchPublicCategory = async () => {
       try {
-        const res = await fetch(`/api/public/terminal/category/${token}`);
+        const res = await fetch(`/api/public/steps/category/${token}`);
         const result = await res.json();
         if (result.success) {
           setData(result.data);

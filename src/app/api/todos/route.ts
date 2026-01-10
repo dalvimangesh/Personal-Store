@@ -171,17 +171,22 @@ export async function POST(request: Request) {
 
             if (deletedItems.length > 0) {
                 await DeletedItem.insertMany(
-                    deletedItems.map((item: any) => ({
-                        userId,
-                        originalId: item._id.toString(),
-                        type: 'todo',
-                        content: {
-                            ...item.toObject(),
-                            title: decrypt(item.title),
-                            description: item.description ? decrypt(item.description) : undefined,
-                            userId // for compatibility
-                        }
-                    }))
+                    deletedItems.map((item: any) => {
+                        const itemObj = item.toObject ? item.toObject() : item;
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                        const { _id, userId: _uid, __v, ...itemContent } = itemObj;
+                        
+                        return {
+                            userId,
+                            originalId: item._id.toString(),
+                            type: 'todo',
+                            content: {
+                                ...itemContent,
+                                title: decrypt(item.title),
+                                description: item.description ? decrypt(item.description) : undefined,
+                            }
+                        };
+                    })
                 );
             }
         }
