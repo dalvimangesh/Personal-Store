@@ -34,6 +34,8 @@ export async function GET() {
             // Link deletion logic maps label -> title, value -> content
             content.title = decrypt(content.title);
             content.content = decrypt(content.content);
+            if (content.label) content.label = decrypt(content.label);
+            if (content.value) content.value = decrypt(content.value);
         } else if (itemObj.type === 'drop') {
             content.content = decrypt(content.content);
             // title is hardcoded "Drop Item" usually

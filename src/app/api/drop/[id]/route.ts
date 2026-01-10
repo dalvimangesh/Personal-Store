@@ -4,6 +4,7 @@ import DeletedItem from '@/models/DeletedItem';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
+import { decrypt } from '@/lib/encryption';
 
 export async function DELETE(
   request: Request,
@@ -28,14 +29,18 @@ export async function DELETE(
     }
 
     // Move to trash
+    const dropObj = drop.toObject();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { _id, userId: _uid, __v, ...dropContent } = dropObj;
+
     await DeletedItem.create({
       userId,
       originalId: id,
       type: 'drop',
       content: {
-        title: 'Drop Item', // Drops don't really have titles, so we give a generic one
-        content: drop.content,
-        ...drop.toObject()
+        title: 'Drop Item', 
+        content: decrypt(drop.content),
+        ...dropContent
       },
     });
 

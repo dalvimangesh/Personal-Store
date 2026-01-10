@@ -19,7 +19,7 @@ export default function PublicTerminalPage({ params }: { params: Promise<{ token
   useEffect(() => {
     const fetchPublicCommand = async () => {
       try {
-        const res = await fetch(`/api/public/terminal/${token}`);
+        const res = await fetch(`/api/public/steps/${token}`);
         const result = await res.json();
         if (result.success) {
           setData(result.data);
