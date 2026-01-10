@@ -4,6 +4,9 @@ export interface IClipboard {
   _id?: string;
   name: string;
   content: string;
+  isHidden?: boolean;
+  isBold?: boolean;
+  color?: string;
 }
 
 export interface IQuickClip extends Document {
@@ -18,7 +21,10 @@ const ClipboardSchema = new Schema({
   content: { type: String, default: "" },
   sharedWith: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   isPublic: { type: Boolean, default: false },
-  publicToken: { type: String }
+  publicToken: { type: String },
+  isHidden: { type: Boolean, default: false },
+  isBold: { type: Boolean, default: false },
+  color: { type: String, default: "inherit" }
 });
 
 const QuickClipSchema: Schema = new Schema(
@@ -42,14 +48,18 @@ QuickClipSchema.index({ "clipboards.publicToken": 1 });
 // Handling Hot Reload in Next.js:
 if (mongoose.models.QuickClip) {
     const schema = mongoose.models.QuickClip.schema;
-    if (!schema.paths['clipboards']) {
+    const clipboardsPath = schema.paths['clipboards'] as any;
+    
+    const needsReset = !clipboardsPath || 
+                       !clipboardsPath.schema || 
+                       !clipboardsPath.schema.paths['sharedWith'] || 
+                       !clipboardsPath.schema.paths['publicToken'] || 
+                       !clipboardsPath.schema.paths['isHidden'] ||
+                       !clipboardsPath.schema.paths['isBold'] ||
+                       !clipboardsPath.schema.paths['color'];
+
+    if (needsReset) {
         delete mongoose.models.QuickClip;
-    } else {
-        // Check for sharedWith in subschema
-        const clipboardsPath = schema.paths['clipboards'] as mongoose.Schema.Types.DocumentArray;
-        if (clipboardsPath.schema && (!clipboardsPath.schema.paths['sharedWith'] || !clipboardsPath.schema.paths['publicToken'])) {
-             delete mongoose.models.QuickClip;
-        }
     }
 }
 

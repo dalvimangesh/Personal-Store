@@ -9,12 +9,20 @@ export interface ILinkCategory {
   _id?: string;
   name: string;
   items: ILinkItem[];
+  isHidden?: boolean;
+  folderId?: string;
+}
+
+export interface ILinkFolder {
+  _id?: string;
+  name: string;
 }
 
 export interface ILinkShare extends Document {
   userId: mongoose.Types.ObjectId;
   items: ILinkItem[]; // Legacy
   categories: ILinkCategory[];
+  folders: ILinkFolder[];
   updatedAt: Date;
 }
 
@@ -28,7 +36,13 @@ const LinkCategorySchema = new Schema({
   items: [LinkItemSchema],
   sharedWith: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   isPublic: { type: Boolean, default: false },
-  publicToken: { type: String }
+  publicToken: { type: String },
+  isHidden: { type: Boolean, default: false },
+  folderId: { type: String }
+});
+
+const LinkFolderSchema = new Schema({
+  name: { type: String, required: true }
 });
 
 const LinkShareSchema: Schema = new Schema(
@@ -37,6 +51,10 @@ const LinkShareSchema: Schema = new Schema(
     items: [LinkItemSchema], // Keeping for legacy migration
     categories: {
       type: [LinkCategorySchema],
+      default: []
+    },
+    folders: {
+      type: [LinkFolderSchema],
       default: []
     }
   },

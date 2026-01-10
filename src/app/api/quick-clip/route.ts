@@ -50,17 +50,18 @@ export async function GET() {
 
         // Decrypt and format my clipboards
         const myDecryptedClips = await Promise.all(myClips.map(async (clip: any) => {
-            const clipObj = clip.toObject ? clip.toObject() : clip;
-            
             let sharedWithUsers: any[] = [];
-            if (clipObj.sharedWith && clipObj.sharedWith.length > 0) {
-                sharedWithUsers = await User.find({ _id: { $in: clipObj.sharedWith } }).select('username _id');
+            if (clip.sharedWith && clip.sharedWith.length > 0) {
+                sharedWithUsers = await User.find({ _id: { $in: clip.sharedWith } }).select('username _id');
             }
 
             return {
-                ...clipObj,
-                name: decrypt(clipObj.name),
-                content: decrypt(clipObj.content),
+                _id: clip._id?.toString(),
+                name: decrypt(clip.name),
+                content: decrypt(clip.content),
+                isHidden: clip.isHidden === true,
+                isBold: clip.isBold === true,
+                color: clip.color || "inherit",
                 isOwner: true,
                 ownerId: userId,
                 sharedWith: sharedWithUsers.map(u => ({ userId: u._id, username: u.username }))
@@ -90,17 +91,18 @@ export async function GET() {
         );
 
         const decryptedSharedClips = await Promise.all(sharedClips.map(async (clip: any) => {
-            const clipObj = clip.toObject ? clip.toObject() : clip;
-            
             let sharedWithUsers: any[] = [];
-            if (clipObj.sharedWith && clipObj.sharedWith.length > 0) {
-                sharedWithUsers = await User.find({ _id: { $in: clipObj.sharedWith } }).select('username _id');
+            if (clip.sharedWith && clip.sharedWith.length > 0) {
+                sharedWithUsers = await User.find({ _id: { $in: clip.sharedWith } }).select('username _id');
             }
 
             return {
-                ...clipObj,
-                name: decrypt(clipObj.name),
-                content: decrypt(clipObj.content),
+                _id: clip._id?.toString(),
+                name: decrypt(clip.name),
+                content: decrypt(clip.content),
+                isHidden: clip.isHidden === true,
+                isBold: clip.isBold === true,
+                color: clip.color || "inherit",
                 isOwner: false,
                 ownerId: ownerId,
                 ownerUsername: ownerUsername,
@@ -155,6 +157,9 @@ export async function POST(request: Request) {
         ...clip,
         name: encrypt(clip.name || "New Clipboard"),
         content: encrypt(clip.content || ""),
+        isHidden: clip.isHidden || false,
+        isBold: clip.isBold || false,
+        color: clip.color || "inherit",
         // Preserve sharedWith IDs
         sharedWith: clip.sharedWith ? clip.sharedWith.map((u: any) => u.userId || u) : []
     }));
@@ -172,9 +177,12 @@ export async function POST(request: Request) {
     );
 
     const decryptedClipboards = quickClip.clipboards.map((clip: any) => ({
-        ...clip.toObject ? clip.toObject() : clip,
+        _id: clip._id?.toString(),
         name: decrypt(clip.name),
         content: decrypt(clip.content),
+        isHidden: clip.isHidden === true,
+        isBold: clip.isBold === true,
+        color: clip.color || "inherit",
         isOwner: true,
         ownerId: userId,
         sharedWith: (clip.sharedWith || []).map((id: any) => ({ userId: id })) 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { HighlightedTextarea } from "@/components/ui/highlighted-textarea";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ interface SmartEditorProps {
   snippets: Snippet[];
 }
 
-export function SmartEditor({ isOpen, onClose, snippets }: SmartEditorProps) {
+export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets }: SmartEditorProps) {
   const [text, setText] = useState("");
   const [suggestions, setSuggestions] = useState<Snippet[]>([]);
   const [cursorIndex, setCursorIndex] = useState<number | null>(null);
@@ -51,16 +51,16 @@ export function SmartEditor({ isOpen, onClose, snippets }: SmartEditorProps) {
     }
   }, [text, cursorIndex, snippets]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
     setCursorIndex(e.target.selectionStart);
-  };
+  }, []);
 
-  const handleSelect = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+  const handleSelect = useCallback((e: React.SyntheticEvent<HTMLTextAreaElement>) => {
     setCursorIndex(e.currentTarget.selectionStart);
-  };
+  }, []);
 
-  const insertSnippet = (snippet: Snippet) => {
+  const insertSnippet = useCallback((snippet: Snippet) => {
     if (!textareaRef.current || cursorIndex === null) return;
 
     const textBeforeCursor = text.slice(0, cursorIndex);
@@ -74,9 +74,9 @@ export function SmartEditor({ isOpen, onClose, snippets }: SmartEditorProps) {
     setText(newText);
     setSuggestions([]);
     textareaRef.current.focus();
-  };
+  }, [text, cursorIndex]);
 
-  const handleAskGemini = async () => {
+  const handleAskGemini = useCallback(async () => {
     if (!text.trim()) return;
     
     setIsGeminiLoading(true);
@@ -103,7 +103,7 @@ export function SmartEditor({ isOpen, onClose, snippets }: SmartEditorProps) {
     } finally {
       setIsGeminiLoading(false);
     }
-  };
+  }, [text]);
 
   if (!isOpen) return null;
 
@@ -225,6 +225,7 @@ export function SmartEditor({ isOpen, onClose, snippets }: SmartEditorProps) {
             </Button>
             <Button size="sm" variant="default" onClick={() => {
                 navigator.clipboard.writeText(text);
+                toast.success("Copied to clipboard!");
             }}>
                 <Copy className="h-3 w-3 mr-2" />
                 Copy All
@@ -233,4 +234,4 @@ export function SmartEditor({ isOpen, onClose, snippets }: SmartEditorProps) {
       </div>
     </div>
   );
-}
+});

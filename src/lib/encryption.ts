@@ -38,6 +38,13 @@ export function decrypt(text: string): string {
     if (!ivPart) return text;
 
     const iv = Buffer.from(ivPart, 'hex');
+    
+    // Validate IV length (AES-256-CBC requires 16 bytes)
+    if (iv.length !== IV_LENGTH) {
+        // If IV length is incorrect, it's likely not an encrypted string (e.g. plain text with colons)
+        return text;
+    }
+
     const encryptedText = Buffer.from(textParts.join(':'), 'hex');
     
     const key = getEncryptionKey();

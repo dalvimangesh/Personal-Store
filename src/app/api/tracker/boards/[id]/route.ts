@@ -67,15 +67,15 @@ export async function PUT(
         }
 
         const { id } = await params;
-        const { title } = await request.json();
+        const { title, isHidden } = await request.json();
 
-        if (!title || typeof title !== 'string') {
-            return NextResponse.json({ error: 'Title is required' }, { status: 400 });
-        }
+        const updateFields: any = {};
+        if (title !== undefined) updateFields.title = title.trim();
+        if (isHidden !== undefined) updateFields.isHidden = isHidden;
 
         const board = await TrackerBoard.findOneAndUpdate(
             { _id: id, user: session.userId },
-            { title: title.trim() },
+            updateFields,
             { new: true }
         );
 
@@ -88,6 +88,7 @@ export async function PUT(
             data: {
                 id: board._id.toString(),
                 title: board.title,
+                isHidden: board.isHidden,
                 createdAt: board.createdAt,
             }
         });

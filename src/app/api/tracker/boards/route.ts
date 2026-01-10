@@ -41,6 +41,7 @@ export async function GET() {
     const formattedBoards = boards.map((board: any) => ({
       id: board._id.toString(),
       title: board.title,
+      isHidden: board.isHidden,
       createdAt: board.createdAt,
     }));
 
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
     const board = await TrackerBoard.create({
       user: session.userId,
       title: title.trim(),
+      isHidden: false,
     });
 
     return NextResponse.json({ 
@@ -81,6 +83,7 @@ export async function POST(request: Request) {
       data: {
         id: board._id.toString(),
         title: board.title,
+        isHidden: board.isHidden,
         createdAt: board.createdAt,
       }
     });

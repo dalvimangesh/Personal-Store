@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Snippet } from '@/types';
 
 export function useSnippets() {
@@ -6,11 +6,7 @@ export function useSnippets() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchSnippets();
-  }, []);
-
-  const fetchSnippets = async () => {
+  const fetchSnippets = useCallback(async () => {
     try {
       setIsLoading(true);
       const res = await fetch('/api/snippets');
@@ -23,9 +19,13 @@ export function useSnippets() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const addSnippet = async (snippet: Omit<Snippet, 'id' | 'createdAt'>) => {
+  useEffect(() => {
+    fetchSnippets();
+  }, [fetchSnippets]);
+
+  const addSnippet = useCallback(async (snippet: Omit<Snippet, 'id' | 'createdAt'>) => {
     try {
       const res = await fetch('/api/snippets', {
         method: 'POST',
@@ -45,9 +45,9 @@ export function useSnippets() {
       console.error('Failed to add snippet:', error);
       return false;
     }
-  };
+  }, []);
 
-  const updateSnippet = async (id: string, updatedData: Partial<Omit<Snippet, 'id' | 'createdAt'>>) => {
+  const updateSnippet = useCallback(async (id: string, updatedData: Partial<Omit<Snippet, 'id' | 'createdAt'>>) => {
     try {
       const res = await fetch(`/api/snippets/${id}`, {
         method: 'PUT',
@@ -71,9 +71,9 @@ export function useSnippets() {
       console.error('Failed to update snippet:', error);
       return false;
     }
-  };
+  }, []);
 
-  const deleteSnippet = async (id: string) => {
+  const deleteSnippet = useCallback(async (id: string) => {
     try {
       const res = await fetch(`/api/snippets/${id}`, {
         method: 'DELETE',
@@ -89,16 +89,19 @@ export function useSnippets() {
       console.error('Failed to delete snippet:', error);
       return false;
     }
-  };
+  }, []);
 
-  const filteredSnippets = snippets.filter((snippet) => {
+  const filteredSnippets = useMemo(() => {
+    if (!searchQuery.trim()) return snippets;
     const query = searchQuery.toLowerCase();
-    return (
-      snippet.title.toLowerCase().includes(query) ||
-      snippet.content.toLowerCase().includes(query) ||
-      snippet.tags.some((tag) => tag.toLowerCase().includes(query))
-    );
-  });
+    return snippets.filter((snippet) => {
+      return (
+        snippet.title.toLowerCase().includes(query) ||
+        snippet.content.toLowerCase().includes(query) ||
+        snippet.tags.some((tag) => tag.toLowerCase().includes(query))
+      );
+    });
+  }, [snippets, searchQuery]);
 
   return {
     snippets: filteredSnippets,

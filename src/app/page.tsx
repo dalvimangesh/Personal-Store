@@ -2,8 +2,26 @@
 
 import { useState, useMemo, createContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame, SquareKanban, Activity } from "lucide-react";
+import Image from "next/image";
+import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame, SquareKanban, Activity, Footprints, Inbox, Info, GripVertical } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +35,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+
 import { useSnippets } from "@/hooks/useSnippets";
 import { useSharedSnippets } from "@/hooks/useSharedSnippets";
 import { Snippet, SharedSnippet } from "@/types";
@@ -30,8 +51,8 @@ import { TrashStore } from "@/components/TrashStore";
 import { TodoStore } from "@/components/TodoStore";
 import { HabitStore } from "@/components/HabitStore";
 import { TrackerStore } from "@/components/TrackerStore";
+import { StepsStore } from "@/components/StepsStore";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
-import { Inbox, Info } from "lucide-react";
 import { FeaturesList } from "@/components/FeaturesList";
 import { SecretCreator } from "@/components/SecretCreator";
 import { ModeToggle } from "@/components/ModeToggle";
@@ -45,151 +66,158 @@ const PrivacyContext = createContext<{
   togglePrivacyMode: () => {},
 });
 
-  interface TagSidebarProps {
+const STORE_ITEMS = [
+    { id: 'quick-clip', label: 'Clipboard Store', icon: Clipboard },
+    { id: 'todo', label: 'Todo Store', icon: ListTodo },
+    { id: 'tracker', label: 'Tracking Store', icon: SquareKanban },
+    { id: 'habit', label: 'Habit Store', icon: Activity },
+    { id: 'steps', label: 'Steps Store', icon: Footprints },
+    { id: 'link-share', label: 'Link Store', icon: Link2 },
+    { id: 'dropzone', label: 'Drop Store', icon: Inbox },
+    { id: 'public-store', label: 'Public Store', icon: Globe },
+    { id: 'secret-store', label: 'Secret Store', icon: Flame },
+    { id: 'trash', label: 'Trash Store', icon: Trash2 },
+    { id: 'snippets', label: 'Snippet Store', icon: StickyNote },
+] as const;
+
+type ViewType = 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit' | 'steps';
+
+interface TagSidebarProps {
   uniqueTags: string[];
   selectedTag: string | null;
   showHidden: boolean;
-  currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit';
+  currentView: ViewType;
   isPrivacyMode: boolean;
+  visibleStores: Record<string, boolean>;
+  orderedStores: string[];
   onSelectTag: (tag: string | null) => void;
   onToggleHidden: (show: boolean) => void;
-  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit') => void;
+  onViewChange: (view: ViewType) => void;
 }
 
-const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivacyMode, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
+const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivacyMode, visibleStores, orderedStores, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
   <div className="space-y-4">
     <div className="px-3 py-2">
-      <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-        Menu
-      </h2>
+      <div className="flex items-center justify-between mb-2 px-4">
+          <h2 className="text-lg font-semibold tracking-tight">
+            Menu
+          </h2>
+      </div>
       <div className="space-y-1">
-        <Button
-            variant={currentView === 'quick-clip' ? "secondary" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => onViewChange('quick-clip')}
-        >
-            <Clipboard className="mr-2 h-4 w-4" />
-            Clipboard Store
-        </Button>
-        <Button
-            variant={currentView === 'todo' ? "secondary" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => onViewChange('todo')}
-        >
-            <ListTodo className="mr-2 h-4 w-4" />
-            Todo Store
-        </Button>
-        <Button
-            variant={currentView === 'tracker' ? "secondary" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => onViewChange('tracker')}
-        >
-            <SquareKanban className="mr-2 h-4 w-4" />
-            Tracking Store
-        </Button>
-        <Button
-            variant={currentView === 'habit' ? "secondary" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => onViewChange('habit')}
-        >
-            <Activity className="mr-2 h-4 w-4" />
-            Habit Store
-        </Button>
-        <Button
-            variant={currentView === 'link-share' ? "secondary" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => onViewChange('link-share')}
-        >
-            <Link2 className="mr-2 h-4 w-4" />
-            Link Store
-        </Button>
-        <Button
-            variant={currentView === 'dropzone' ? "secondary" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => onViewChange('dropzone')}
-        >
-            <Inbox className="mr-2 h-4 w-4" />
-            Drop Store
-        </Button>
-        <Button
-            variant={currentView === 'public-store' ? "secondary" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => onViewChange('public-store')}
-        >
-            <Globe className="mr-2 h-4 w-4" />
-            Public Store
-        </Button>
-        <Button
-            variant={currentView === 'secret-store' ? "secondary" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => onViewChange('secret-store')}
-        >
-            <Flame className="mr-2 h-4 w-4" />
-            Secret Store
-        </Button>
-        <Button
-            variant={currentView === 'trash' ? "secondary" : "ghost"}
-            className="w-full justify-start text-black hover:text-black dark:text-white dark:hover:text-white"
-            onClick={() => onViewChange('trash')}
-        >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Trash Store
-        </Button>
+        {orderedStores.map((storeId) => {
+             const store = STORE_ITEMS.find(s => s.id === storeId);
+             if (!store || !visibleStores[storeId]) return null;
 
-        <Button
-          variant={currentView === 'snippets' && selectedTag === null && !showHidden ? "secondary" : "ghost"}
-          className="w-full justify-start"
-          onClick={() => {
-              onViewChange('snippets');
-              onSelectTag(null);
-              onToggleHidden(false);
-          }}
-        >
-          <StickyNote className="mr-2 h-4 w-4" />
-          Snippet Store
-        </Button>
+             if (storeId === 'snippets') {
+                return (
+                    <div key="snippets-group">
+                        <Button
+                            variant={currentView === 'snippets' && selectedTag === null && !showHidden ? "secondary" : "ghost"}
+                            className="w-full justify-start"
+                            onClick={() => {
+                                onViewChange('snippets');
+                                onSelectTag(null);
+                                onToggleHidden(false);
+                            }}
+                        >
+                            <StickyNote className="mr-2 h-4 w-4" />
+                            Snippet Store
+                        </Button>
 
-        <div className="space-y-1 pl-4">
-            <Button
-                variant={currentView === 'snippets' && showHidden ? "secondary" : "ghost"}
-                className="w-full justify-start text-muted-foreground hover:text-foreground h-8"
-                onClick={() => {
-                    onViewChange('snippets');
-                    onToggleHidden(true);
-                }}
-            >
-                <EyeOff className="mr-2 h-4 w-4" />
-                Hidden Snippets
-            </Button>
-            
-            {uniqueTags.map((tag) => (
-              <Button
-                key={tag}
-                variant={currentView === 'snippets' && selectedTag === tag ? "secondary" : "ghost"}
-                className={`w-full justify-start h-8 group ${isPrivacyMode ? "text-transparent select-none" : ""}`}
-                onClick={() => {
-                    onViewChange('snippets');
-                    onSelectTag(tag);
-                    onToggleHidden(false);
-                }}
-              >
-                <Tag className={`mr-2 h-4 w-4 ${isPrivacyMode ? "text-muted-foreground" : ""}`} />
-                <span className={isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300 text-foreground" : ""}>
-                    {tag}
-                </span>
-              </Button>
-            ))}
-        </div>
+                        <div className="space-y-1 pl-4">
+                            <Button
+                                variant={currentView === 'snippets' && showHidden ? "secondary" : "ghost"}
+                                className="w-full justify-start text-muted-foreground hover:text-foreground h-8"
+                                onClick={() => {
+                                    onViewChange('snippets');
+                                    onToggleHidden(true);
+                                }}
+                            >
+                                <EyeOff className="mr-2 h-4 w-4" />
+                                Hidden Snippets
+                            </Button>
+                            
+                            {uniqueTags.map((tag) => (
+                            <Button
+                                key={tag}
+                                variant={currentView === 'snippets' && selectedTag === tag ? "secondary" : "ghost"}
+                                className={`w-full justify-start h-8 group ${isPrivacyMode ? "text-transparent select-none" : ""}`}
+                                onClick={() => {
+                                    onViewChange('snippets');
+                                    onSelectTag(tag);
+                                    onToggleHidden(false);
+                                }}
+                            >
+                                <Tag className={`mr-2 h-4 w-4 ${isPrivacyMode ? "text-muted-foreground" : ""}`} />
+                                <span className={isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300 text-foreground" : ""}>
+                                    {tag}
+                                </span>
+                            </Button>
+                            ))}
+                        </div>
+                    </div>
+                );
+             }
+
+             return (
+                <Button
+                    key={store.id}
+                    variant={currentView === store.id ? "secondary" : "ghost"}
+                    className="w-full justify-start"
+                    onClick={() => onViewChange(store.id as ViewType)}
+                >
+                    <store.icon className="mr-2 h-4 w-4" />
+                    {store.label}
+                </Button>
+             );
+        })}
       </div>
     </div>
   </div>
 );
 
+function SortableStoreItem({ id, visible, onToggle }: { id: string; visible: boolean; onToggle: () => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const store = STORE_ITEMS.find(s => s.id === id);
+  if (!store) return null;
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-3 border p-3 rounded-lg bg-card shadow-sm select-none group">
+        <div {...attributes} {...listeners} className="cursor-grab hover:text-foreground text-muted-foreground touch-none">
+            <GripVertical className="h-5 w-5" />
+        </div>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+             <Checkbox 
+                id={`sort-store-${id}`} 
+                checked={visible}
+                onCheckedChange={onToggle}
+            />
+            <Label htmlFor={`sort-store-${id}`} className="flex items-center gap-2 cursor-pointer truncate font-medium">
+                <store.icon className="h-4 w-4 text-muted-foreground" />
+                {store.label}
+            </Label>
+        </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
   const {
     snippets,
-    searchQuery,
+    // searchQuery,
     setSearchQuery,
     addSnippet,
     updateSnippet,
@@ -198,14 +226,94 @@ export default function Home() {
 
   const {
     snippets: sharedSnippets,
-    searchQuery: sharedSearchQuery,
+    // searchQuery: sharedSearchQuery,
     setSearchQuery: setSharedSearchQuery,
     addSnippet: addSharedSnippet,
     updateSnippet: updateSharedSnippet,
     deleteSnippet: deleteSharedSnippet,
   } = useSharedSnippets();
 
-  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit'>('snippets');
+  const [currentView, setCurrentView] = useState<ViewType>('snippets');
+  
+  const [visibleStores, setVisibleStores] = useState<Record<string, boolean>>({
+    'quick-clip': true,
+    'todo': true,
+    'tracker': true,
+    'habit': true,
+    'steps': true,
+    'link-share': true,
+    'dropzone': true,
+    'public-store': true,
+    'secret-store': true,
+    'trash': true,
+    'snippets': true,
+  });
+
+  const [orderedStores, setOrderedStores] = useState<string[]>(STORE_ITEMS.map(s => s.id));
+
+  useEffect(() => {
+    const savedView = localStorage.getItem("lastView");
+    if (savedView) {
+      if (savedView === 'terminal') {
+          setCurrentView('steps');
+      } else {
+          setCurrentView(savedView as ViewType);
+      }
+    }
+    const savedVisibility = localStorage.getItem("visibleStores");
+    if (savedVisibility) {
+        try {
+            setVisibleStores(JSON.parse(savedVisibility));
+        } catch (e) {
+            console.error("Failed to parse visible stores", e);
+        }
+    }
+    const savedOrder = localStorage.getItem("orderedStores");
+    if (savedOrder) {
+        try {
+            const parsedOrder = JSON.parse(savedOrder);
+            // Ensure all current stores are present and no old ones remain
+            const currentIds = new Set(STORE_ITEMS.map(s => s.id));
+            const validOrder = parsedOrder.filter((id: string) => currentIds.has(id as any));
+            const missingIds = STORE_ITEMS.filter(s => !validOrder.includes(s.id)).map(s => s.id);
+            setOrderedStores([...validOrder, ...missingIds]);
+        } catch (e) {
+            console.error("Failed to parse ordered stores", e);
+        }
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("lastView", currentView);
+  }, [currentView]);
+
+  const toggleStoreVisibility = (id: string) => {
+      const newVisibility = { ...visibleStores, [id]: !visibleStores[id] };
+      setVisibleStores(newVisibility);
+      localStorage.setItem("visibleStores", JSON.stringify(newVisibility));
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setOrderedStores((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        localStorage.setItem("orderedStores", JSON.stringify(newOrder));
+        return newOrder;
+      });
+    }
+  };
+
   const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
   const [selectedSharedSnippet, setSelectedSharedSnippet] = useState<SharedSnippet | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -218,6 +326,22 @@ export default function Home() {
   // Privacy Mode State
   const [isPrivacyMode, setIsPrivacyMode] = useState(false);
   const togglePrivacyMode = () => setIsPrivacyMode(!isPrivacyMode);
+
+  // Master Hide/Show State
+  const [showHiddenMaster, setShowHiddenMaster] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("showHiddenMaster");
+    if (saved !== null) {
+      setShowHiddenMaster(saved === "true");
+    }
+  }, []);
+
+  const toggleHiddenMaster = () => {
+    const newVal = !showHiddenMaster;
+    setShowHiddenMaster(newVal);
+    localStorage.setItem("showHiddenMaster", String(newVal));
+  };
 
   const [genericSearchQuery, setGenericSearchQuery] = useState("");
 
@@ -235,14 +359,20 @@ export default function Home() {
   const uniqueTags = useMemo(() => {
     const tags = new Set<string>();
     snippets.forEach((s) => {
-        if (!s.isHidden) {
+        const isSoftVisible = showHiddenMaster || !s.isHiding;
+        if (!s.isHidden && isSoftVisible) {
              s.tags.forEach((t) => tags.add(t))
         }
     });
     return Array.from(tags).sort();
-  }, [snippets]);
+  }, [snippets, showHiddenMaster]);
 
   const displayedSnippets = snippets.filter((snippet) => {
+    // If showHiddenMaster is false, don't show snippets marked as isHiding
+    if (!showHiddenMaster && snippet.isHiding) {
+        return false;
+    }
+
     if (showHidden) {
         if (!snippet.isHidden) return false;
     } else {
@@ -283,13 +413,14 @@ export default function Home() {
     }
   };
 
-  const handleSaveSnippet = (data: { title: string; content: string; tags: string[]; isHidden: boolean }) => {
+  const handleSaveSnippet = (data: { title: string; content: string; tags: string[]; isHidden: boolean; isHiding: boolean }) => {
     if (selectedSnippet) {
       updateSnippet(selectedSnippet.id, {
         title: data.title,
         content: data.content,
         tags: data.tags,
         isHidden: data.isHidden,
+        isHiding: data.isHiding,
       });
       toast.success("Snippet updated!");
     } else {
@@ -298,6 +429,7 @@ export default function Home() {
         content: data.content,
         tags: data.tags,
         isHidden: data.isHidden,
+        isHiding: data.isHiding,
       });
       toast.success("Snippet added!");
     }
@@ -351,7 +483,7 @@ export default function Home() {
   };
 
   // Helper to switch views
-  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit') => {
+  const handleViewChange = (view: ViewType) => {
       setCurrentView(view);
       // Reset search when switching views (optional, but often good UX)
       // setGenericSearchQuery(""); 
@@ -368,7 +500,16 @@ export default function Home() {
     <PrivacyContext.Provider value={{ isPrivacyMode, togglePrivacyMode }}>
     <div className="min-h-screen bg-background flex">
       <aside className="hidden md:flex flex-col w-64 border-r h-screen p-4 sticky top-0">
-        <div className="mb-6 px-4 shrink-0">
+        <div className="mb-6 px-4 shrink-0 flex items-center gap-2">
+          <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center p-1">
+            <Image 
+              src="/logo.svg" 
+              alt="Personal Store Logo" 
+              width={24} 
+              height={24} 
+              className="invert dark:invert-0"
+            />
+          </div>
           <h1 className="text-xl font-bold tracking-tight">Personal Store</h1>
         </div>
         <div className="flex-1 overflow-y-auto">
@@ -378,6 +519,8 @@ export default function Home() {
                 showHidden={showHidden}
                 currentView={currentView}
                 isPrivacyMode={isPrivacyMode}
+                visibleStores={visibleStores}
+                orderedStores={orderedStores}
                 onSelectTag={setSelectedTag} 
                 onToggleHidden={(hidden) => {
                     setShowHidden(hidden);
@@ -410,10 +553,21 @@ export default function Home() {
 
       {/* Main Content Area - Using Flex to adjust width when editor is open */}
       <div className="flex flex-1 min-w-0 overflow-hidden">
-        <main className={`flex-1 p-4 md:p-8 min-w-0 w-full flex flex-col ${currentView === 'dropzone' ? 'overflow-hidden h-[100dvh]' : 'overflow-y-auto h-screen relative'}`}>
+        <main className={`flex-1 p-4 md:p-8 min-w-0 w-full flex flex-col ${['dropzone', 'quick-clip', 'tracker'].includes(currentView) ? 'overflow-hidden h-full' : 'overflow-y-auto h-full relative'}`}>
           <header className="flex flex-col gap-4 mb-6 shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20 pt-2">
             <div className="flex items-center justify-between md:hidden">
-              <h1 className="text-xl font-bold tracking-tight">Personal Store</h1>
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center p-1">
+                  <Image 
+                    src="/logo.svg" 
+                    alt="Personal Store Logo" 
+                    width={24} 
+                    height={24} 
+                    className="invert dark:invert-0"
+                  />
+                </div>
+                <h1 className="text-xl font-bold tracking-tight">Personal Store</h1>
+              </div>
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="icon">
@@ -432,6 +586,8 @@ export default function Home() {
                         showHidden={showHidden}
                         currentView={currentView}
                         isPrivacyMode={isPrivacyMode}
+                        visibleStores={visibleStores}
+                        orderedStores={orderedStores}
                         onSelectTag={(tag) => {
                             setSelectedTag(tag);
                             setShowHidden(false);
@@ -480,6 +636,7 @@ export default function Home() {
                       currentView === 'link-share' ? "Search links..." :
                       currentView === 'trash' ? "Search trash..." :
                       currentView === 'todo' ? "Search todos..." :
+                      currentView === 'steps' ? "Search steps..." :
                       "Search snippets..."
                   }
                   className="pl-9 h-9 w-full"
@@ -531,7 +688,7 @@ export default function Home() {
                     <Button onClick={() => openSharedEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
                         <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Public</span><span className="sm:hidden">Add</span>
                     </Button>
-                ) : (currentView === 'todo' || currentView === 'secret-store' || currentView === 'tracker' || currentView === 'habit') ? null : (
+                ) : (currentView === 'todo' || currentView === 'secret-store' || currentView === 'tracker' || currentView === 'habit' || currentView === 'steps') ? null : (
                     <Button onClick={() => openEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
                         <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Snippet</span><span className="sm:hidden">Add</span>
                     </Button>
@@ -561,23 +718,27 @@ export default function Home() {
 
           {currentView === 'quick-clip' ? (
             <div className="flex-1 h-full min-h-[500px]">
-                <QuickClipboardEditor isPrivacyMode={isPrivacyMode} />
+                <QuickClipboardEditor isPrivacyMode={isPrivacyMode} showHiddenMaster={showHiddenMaster} />
             </div>
           ) : currentView === 'tracker' ? (
-             <div className="flex-1 w-full">
-                <TrackerStore isPrivacyMode={isPrivacyMode} />
-             </div>
+            <div className="flex-1 w-full">
+                <TrackerStore isPrivacyMode={isPrivacyMode} showHiddenMaster={showHiddenMaster} />
+            </div>
           ) : currentView === 'todo' ? (
-             <div className="flex-1 h-full min-h-[500px] w-full">
-                <TodoStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
-             </div>
+            <div className="flex-1 h-full min-h-[500px] w-full">
+                <TodoStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} showHiddenMaster={showHiddenMaster} />
+            </div>
           ) : currentView === 'habit' ? (
-             <div className="flex-1 h-full min-h-[500px] w-full">
-                <HabitStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
-             </div>
+            <div className="flex-1 h-full min-h-[500px] w-full">
+                <HabitStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} showHiddenMaster={showHiddenMaster} />
+            </div>
+          ) : currentView === 'steps' ? (
+            <div className="flex-1 h-full min-h-[500px] w-full">
+                <StepsStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
+            </div>
           ) : currentView === 'link-share' ? (
              <div className="flex-1 h-full min-h-[500px] w-full">
-                <LinkShareEditor searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
+                <LinkShareEditor searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} showHiddenMaster={showHiddenMaster} />
              </div>
           ) : currentView === 'dropzone' ? (
              <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden">
@@ -595,16 +756,79 @@ export default function Home() {
             <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden overflow-y-auto p-6">
                 <div className="max-w-4xl mx-auto space-y-8">
                     <div className="space-y-4">
-                        <h1 className="text-4xl font-bold tracking-tight">Personal Store</h1>
+                        <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center p-2">
+                                <Image 
+                                    src="/logo.svg" 
+                                    alt="Personal Store Logo" 
+                                    width={48} 
+                                    height={48} 
+                                    className="invert dark:invert-0"
+                                />
+                            </div>
+                            <h1 className="text-4xl font-bold tracking-tight">Personal Store</h1>
+                        </div>
                         <p className="text-xl text-muted-foreground">
-                            Your centralized clipboard vault for snippets, links, and seamless sharing.
+                            A modern workspace for your snippets, links, tasks, and secrets. 
+                            Private by default, powerful by design.
                         </p>
                     </div>
 
                     <div className="grid gap-8">
                         <section className="space-y-4">
-                            <h2 className="text-2xl font-semibold">Features</h2>
-                            <div className="grid sm:grid-cols-2 gap-4 border rounded-lg p-6 bg-card">
+                            <h2 className="text-2xl font-semibold">Store Settings</h2>
+                            <div className="border rounded-xl p-8 bg-card shadow-sm space-y-6">
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-medium">Visible Stores</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Select which stores you want to see in your menu. Drag to reorder.
+                                    </p>
+                                    
+                                    <DndContext 
+                                        sensors={sensors}
+                                        collisionDetection={closestCenter}
+                                        onDragEnd={handleDragEnd}
+                                    >
+                                        <SortableContext 
+                                            items={orderedStores}
+                                            strategy={rectSortingStrategy}
+                                        >
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                {orderedStores.map((storeId) => (
+                                                    <SortableStoreItem 
+                                                        key={storeId}
+                                                        id={storeId}
+                                                        visible={visibleStores[storeId]}
+                                                        onToggle={() => toggleStoreVisibility(storeId)}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </SortableContext>
+                                    </DndContext>
+                                </div>
+                                
+                                <div className="border-t pt-6 flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <p className="font-medium">Master Visibility Toggle</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Show or hide items across all stores that you&apos;ve marked as &quot;hidden&quot;.
+                                        </p>
+                                    </div>
+                                    <Button 
+                                        variant={showHiddenMaster ? "default" : "outline"}
+                                        onClick={toggleHiddenMaster}
+                                        className="gap-2"
+                                    >
+                                        {showHiddenMaster ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                        {showHiddenMaster ? "Showing Hidden" : "Hiding Hidden"}
+                                    </Button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="space-y-4">
+                            <h2 className="text-2xl font-semibold">Stores & Features</h2>
+                            <div className="border rounded-xl p-8 bg-card shadow-sm">
                                 <FeaturesList />
                             </div>
                         </section>
@@ -709,7 +933,14 @@ export default function Home() {
                       {snippet.title}
                     </h3>
                     {snippet.isHidden && (
-                        <EyeOff className="h-3 w-3 text-muted-foreground" />
+                        <span title="Secretly Hidden">
+                            <EyeOff className="h-3 w-3 text-muted-foreground" />
+                        </span>
+                    )}
+                    {snippet.isHiding && (
+                        <span title="Soft Hidden">
+                            <EyeOff className="h-3 w-3 text-red-500/50" />
+                        </span>
                     )}
                   </div>
                   <p className={`text-xs text-muted-foreground line-clamp-1 mb-2 ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300 select-none" : ""}`}>
@@ -771,6 +1002,7 @@ export default function Home() {
         {isEditorOpen && currentView === 'snippets' && (
              <div className="border-l bg-background h-screen sticky top-0 w-full md:w-[50%] shadow-xl z-30 transition-all duration-300 ease-in-out flex flex-col">
                 <SnippetEditor 
+                    key={selectedSnippet?.id || 'new'}
                     snippet={selectedSnippet}
                     onSave={handleSaveSnippet}
                     onCancel={() => setIsEditorOpen(false)}
@@ -781,6 +1013,7 @@ export default function Home() {
         {isEditorOpen && currentView === 'public-store' && (
              <div className="border-l bg-background h-screen sticky top-0 w-full md:w-[50%] shadow-xl z-30 transition-all duration-300 ease-in-out flex flex-col">
                 <SharedSnippetEditor 
+                    key={selectedSharedSnippet?.id || 'new-shared'}
                     snippet={selectedSharedSnippet}
                     onSave={handleSaveSharedSnippet}
                     onCancel={() => setIsEditorOpen(false)}

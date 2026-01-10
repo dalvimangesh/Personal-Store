@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, Fragment, useMemo, useCallback, memo } from "react";
 import { toast } from "sonner";
 import { Loader2, Trash2, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,21 +30,9 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    fetchItems();
-  }, []);
-
-  const filteredItems = items.filter(item => {
-    const query = searchQuery.toLowerCase();
-    return (
-        item.content.title?.toLowerCase().includes(query) ||
-        item.content.content?.toLowerCase().includes(query) ||
-        item.type.toLowerCase().includes(query)
-    );
-  });
-
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     try {
+      setIsLoading(true);
       const res = await fetch("/api/trash");
       const data = await res.json();
       if (res.ok) {
@@ -58,9 +46,25 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleDeletePermanently = async (id: string) => {
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
+
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return items;
+    const query = searchQuery.toLowerCase();
+    return items.filter(item => {
+        return (
+            item.content.title?.toLowerCase().includes(query) ||
+            item.content.content?.toLowerCase().includes(query) ||
+            item.type.toLowerCase().includes(query)
+        );
+    });
+  }, [items, searchQuery]);
+
+  const handleDeletePermanently = useCallback(async (id: string) => {
     setDeletingId(id);
     try {
       const res = await fetch(`/api/trash/${id}`, {
@@ -84,9 +88,9 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
     } finally {
       setDeletingId(null);
     }
-  };
+  }, []);
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = useCallback(async () => {
     if (selectedIds.size === 0) return;
 
     setIsBulkDeleting(true);
@@ -112,35 +116,39 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
     } finally {
         setIsBulkDeleting(false);
     }
-  };
+  }, [selectedIds]);
 
-  const toggleRow = (id: string) => {
-    const newExpanded = new Set(expandedRows);
-    if (expandedRows.has(id)) {
-        newExpanded.delete(id);
-    } else {
-        newExpanded.add(id);
-    }
-    setExpandedRows(newExpanded);
-  };
+  const toggleRow = useCallback((id: string) => {
+    setExpandedRows(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
+        }
+        return newSet;
+    });
+  }, []);
 
-  const toggleSelectAll = () => {
+  const toggleSelectAll = useCallback(() => {
     if (selectedIds.size === filteredItems.length && filteredItems.length > 0) {
         setSelectedIds(new Set());
     } else {
         setSelectedIds(new Set(filteredItems.map(item => item._id)));
     }
-  };
+  }, [filteredItems, selectedIds.size]);
 
-  const toggleSelect = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-        newSelected.delete(id);
-    } else {
-        newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
-  };
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+        const newSelected = new Set(prev);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        return newSelected;
+    });
+  }, []);
 
   if (isLoading) {
     return (
@@ -199,73 +207,17 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
             </TableHeader>
             <TableBody>
                 {filteredItems.map((item) => (
-                    <Fragment key={item._id}>
-                    <TableRow 
-                        className={`group cursor-pointer hover:bg-muted/50 ${selectedIds.has(item._id) ? "bg-muted/30" : ""}`} 
-                        onClick={() => toggleRow(item._id)}
-                    >
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                            <Checkbox 
-                                checked={selectedIds.has(item._id)}
-                                onCheckedChange={() => toggleSelect(item._id)}
-                                aria-label={`Select ${item.content.title}`}
-                            />
-                        </TableCell>
-                         <TableCell>
-                            {expandedRows.has(item._id) ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                        </TableCell>
-                        <TableCell>
-                            <Badge variant="outline" className="uppercase text-[10px] tracking-wider">
-                                {item.type}
-                            </Badge>
-                        </TableCell>
-                        <TableCell className={`font-medium ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}>
-                            {item.content.title || "(No Title)"}
-                        </TableCell>
-                        <TableCell className={`max-w-[300px] truncate text-muted-foreground text-sm ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}>
-                             {item.type === 'todo' ? item.content.description : item.content.content}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-xs">
-                            {new Date(item.createdAt).toLocaleDateString()} {new Date(item.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </TableCell>
-                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                                disabled={deletingId === item._id}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeletePermanently(item._id);
-                                }}
-                            >
-                                {deletingId === item._id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Trash2 className="h-4 w-4" />
-                                )}
-                            </Button>
-                        </TableCell>
-                    </TableRow>
-                    {expandedRows.has(item._id) && (
-                        <TableRow className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={7} className="p-4">
-                                <div className="flex flex-col gap-2">
-                                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Filtered Content Data</div>
-                                    <div className={`bg-background border rounded-md p-4 font-mono text-xs whitespace-pre-wrap max-h-[300px] overflow-auto shadow-inner ${isPrivacyMode ? "blur-sm hover:blur-none transition-all duration-300" : ""}`}>
-{JSON.stringify({
-    type: item.type,
-    title: item.content.title,
-    content: item.type === 'todo' ? item.content.description : item.content.content,
-    priority: item.type === 'todo' ? item.content.priority : undefined,
-    deadline: item.type === 'todo' ? item.content.deadline : undefined
-}, null, 2)}
-                                    </div>
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                    )}
-                    </Fragment>
+                    <TrashItemRow 
+                        key={item._id}
+                        item={item}
+                        isPrivacyMode={isPrivacyMode}
+                        isSelected={selectedIds.has(item._id)}
+                        isExpanded={expandedRows.has(item._id)}
+                        toggleRow={toggleRow}
+                        toggleSelect={toggleSelect}
+                        deletingId={deletingId}
+                        handleDeletePermanently={handleDeletePermanently}
+                    />
                 ))}
             </TableBody>
         </Table>
@@ -273,3 +225,78 @@ export function TrashStore({ searchQuery = "", isPrivacyMode = false }: { search
     </div>
   );
 }
+
+const TrashItemRow = memo(function TrashItemRow({ 
+    item, 
+    isPrivacyMode, 
+    isSelected, 
+    isExpanded, 
+    toggleRow, 
+    toggleSelect, 
+    deletingId, 
+    handleDeletePermanently 
+}: any) {
+    return (
+        <Fragment>
+            <TableRow 
+                className={`group cursor-pointer hover:bg-muted/50 ${isSelected ? "bg-muted/30" : ""}`} 
+                onClick={() => toggleRow(item._id)}
+            >
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox 
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelect(item._id)}
+                        aria-label={`Select ${item.content.title}`}
+                    />
+                </TableCell>
+                    <TableCell>
+                    {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                </TableCell>
+                <TableCell>
+                    <Badge variant="outline" className="uppercase text-[10px] tracking-wider">
+                        {item.type}
+                    </Badge>
+                </TableCell>
+                <TableCell className={`font-medium ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}>
+                    {item.content.title || "(No Title)"}
+                </TableCell>
+                <TableCell className={`max-w-[300px] truncate text-muted-foreground text-sm ${isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300" : ""}`}>
+                        {item.type === 'todo' ? item.content.description : item.content.content}
+                </TableCell>
+                <TableCell className="text-muted-foreground text-xs">
+                    {new Date(item.createdAt).toLocaleDateString()} {new Date(item.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </TableCell>
+                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                        disabled={deletingId === item._id}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeletePermanently(item._id);
+                        }}
+                    >
+                        {deletingId === item._id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <Trash2 className="h-4 w-4" />
+                        )}
+                    </Button>
+                </TableCell>
+            </TableRow>
+            {isExpanded && (
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableCell colSpan={7} className="p-4">
+                        <div className="flex flex-col gap-2">
+                            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Item Details</div>
+                            <div className={`bg-background border rounded-md p-4 font-mono text-xs whitespace-pre-wrap max-h-[300px] overflow-auto shadow-inner ${isPrivacyMode ? "blur-sm hover:blur-none transition-all duration-300" : ""}`}>
+{JSON.stringify((({ _id, userId, originalId, ...rest }) => rest)(item.content), null, 2)}
+                            </div>
+                        </div>
+                    </TableCell>
+                </TableRow>
+            )}
+        </Fragment>
+    );
+});
