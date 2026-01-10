@@ -3,7 +3,7 @@
 import { useState, useMemo, createContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame, SquareKanban, Activity, Footprints, Inbox, Info, GripVertical } from "lucide-react";
+import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame, SquareKanban, Activity, Terminal } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext, 
@@ -51,7 +51,7 @@ import { TrashStore } from "@/components/TrashStore";
 import { TodoStore } from "@/components/TodoStore";
 import { HabitStore } from "@/components/HabitStore";
 import { TrackerStore } from "@/components/TrackerStore";
-import { StepsStore } from "@/components/StepsStore";
+import { TerminalStore } from "@/components/TerminalStore";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
 import { FeaturesList } from "@/components/FeaturesList";
 import { SecretCreator } from "@/components/SecretCreator";
@@ -86,13 +86,13 @@ interface TagSidebarProps {
   uniqueTags: string[];
   selectedTag: string | null;
   showHidden: boolean;
-  currentView: ViewType;
+  currentView: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit' | 'terminal';
   isPrivacyMode: boolean;
   visibleStores: Record<string, boolean>;
   orderedStores: string[];
   onSelectTag: (tag: string | null) => void;
   onToggleHidden: (show: boolean) => void;
-  onViewChange: (view: ViewType) => void;
+  onViewChange: (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit' | 'terminal') => void;
 }
 
 const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivacyMode, visibleStores, orderedStores, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
@@ -104,73 +104,131 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivac
           </h2>
       </div>
       <div className="space-y-1">
-        {orderedStores.map((storeId) => {
-             const store = STORE_ITEMS.find(s => s.id === storeId);
-             if (!store || !visibleStores[storeId]) return null;
+        <Button
+            variant={currentView === 'quick-clip' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('quick-clip')}
+        >
+            <Clipboard className="mr-2 h-4 w-4" />
+            Clipboard Store
+        </Button>
+        <Button
+            variant={currentView === 'todo' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('todo')}
+        >
+            <ListTodo className="mr-2 h-4 w-4" />
+            Todo Store
+        </Button>
+        <Button
+            variant={currentView === 'tracker' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('tracker')}
+        >
+            <SquareKanban className="mr-2 h-4 w-4" />
+            Tracking Store
+        </Button>
+        <Button
+            variant={currentView === 'habit' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('habit')}
+        >
+            <Activity className="mr-2 h-4 w-4" />
+            Habit Store
+        </Button>
+        <Button
+            variant={currentView === 'terminal' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('terminal')}
+        >
+            <Terminal className="mr-2 h-4 w-4" />
+            Terminal Store
+        </Button>
+        <Button
+            variant={currentView === 'link-share' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('link-share')}
+        >
+            <Link2 className="mr-2 h-4 w-4" />
+            Link Store
+        </Button>
+        <Button
+            variant={currentView === 'dropzone' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('dropzone')}
+        >
+            <Inbox className="mr-2 h-4 w-4" />
+            Drop Store
+        </Button>
+        <Button
+            variant={currentView === 'public-store' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('public-store')}
+        >
+            <Globe className="mr-2 h-4 w-4" />
+            Public Store
+        </Button>
+        <Button
+            variant={currentView === 'secret-store' ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onViewChange('secret-store')}
+        >
+            <Flame className="mr-2 h-4 w-4" />
+            Secret Store
+        </Button>
+        <Button
+            variant={currentView === 'trash' ? "secondary" : "ghost"}
+            className="w-full justify-start text-black hover:text-black dark:text-white dark:hover:text-white"
+            onClick={() => onViewChange('trash')}
+        >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Trash Store
+        </Button>
 
-             if (storeId === 'snippets') {
-                return (
-                    <div key="snippets-group">
-                        <Button
-                            variant={currentView === 'snippets' && selectedTag === null && !showHidden ? "secondary" : "ghost"}
-                            className="w-full justify-start"
-                            onClick={() => {
-                                onViewChange('snippets');
-                                onSelectTag(null);
-                                onToggleHidden(false);
-                            }}
-                        >
-                            <StickyNote className="mr-2 h-4 w-4" />
-                            Snippet Store
-                        </Button>
+        <Button
+          variant={currentView === 'snippets' && selectedTag === null && !showHidden ? "secondary" : "ghost"}
+          className="w-full justify-start"
+          onClick={() => {
+              onViewChange('snippets');
+              onSelectTag(null);
+              onToggleHidden(false);
+          }}
+        >
+          <StickyNote className="mr-2 h-4 w-4" />
+          Snippet Store
+        </Button>
 
-                        <div className="space-y-1 pl-4">
-                            <Button
-                                variant={currentView === 'snippets' && showHidden ? "secondary" : "ghost"}
-                                className="w-full justify-start text-muted-foreground hover:text-foreground h-8"
-                                onClick={() => {
-                                    onViewChange('snippets');
-                                    onToggleHidden(true);
-                                }}
-                            >
-                                <EyeOff className="mr-2 h-4 w-4" />
-                                Hidden Snippets
-                            </Button>
-                            
-                            {uniqueTags.map((tag) => (
-                            <Button
-                                key={tag}
-                                variant={currentView === 'snippets' && selectedTag === tag ? "secondary" : "ghost"}
-                                className={`w-full justify-start h-8 group ${isPrivacyMode ? "text-transparent select-none" : ""}`}
-                                onClick={() => {
-                                    onViewChange('snippets');
-                                    onSelectTag(tag);
-                                    onToggleHidden(false);
-                                }}
-                            >
-                                <Tag className={`mr-2 h-4 w-4 ${isPrivacyMode ? "text-muted-foreground" : ""}`} />
-                                <span className={isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300 text-foreground" : ""}>
-                                    {tag}
-                                </span>
-                            </Button>
-                            ))}
-                        </div>
-                    </div>
-                );
-             }
-
-             return (
-                <Button
-                    key={store.id}
-                    variant={currentView === store.id ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    onClick={() => onViewChange(store.id as ViewType)}
-                >
-                    <store.icon className="mr-2 h-4 w-4" />
-                    {store.label}
-                </Button>
-             );
-        })}
+        <div className="space-y-1 pl-4">
+            <Button
+                variant={currentView === 'snippets' && showHidden ? "secondary" : "ghost"}
+                className="w-full justify-start text-muted-foreground hover:text-foreground h-8"
+                onClick={() => {
+                    onViewChange('snippets');
+                    onToggleHidden(true);
+                }}
+            >
+                <EyeOff className="mr-2 h-4 w-4" />
+                Hidden Snippets
+            </Button>
+            
+            {uniqueTags.map((tag) => (
+              <Button
+                key={tag}
+                variant={currentView === 'snippets' && selectedTag === tag ? "secondary" : "ghost"}
+                className={`w-full justify-start h-8 group ${isPrivacyMode ? "text-transparent select-none" : ""}`}
+                onClick={() => {
+                    onViewChange('snippets');
+                    onSelectTag(tag);
+                    onToggleHidden(false);
+                }}
+              >
+                <Tag className={`mr-2 h-4 w-4 ${isPrivacyMode ? "text-muted-foreground" : ""}`} />
+                <span className={isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300 text-foreground" : ""}>
+                    {tag}
+                </span>
+              </Button>
+            ))}
+        </div>
       </div>
     </div>
   </div>
@@ -233,86 +291,18 @@ export default function Home() {
     deleteSnippet: deleteSharedSnippet,
   } = useSharedSnippets();
 
-  const [currentView, setCurrentView] = useState<ViewType>('snippets');
+  const [currentView, setCurrentView] = useState<'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit' | 'terminal'>('snippets');
   
-  const [visibleStores, setVisibleStores] = useState<Record<string, boolean>>({
-    'quick-clip': true,
-    'todo': true,
-    'tracker': true,
-    'habit': true,
-    'steps': true,
-    'link-share': true,
-    'dropzone': true,
-    'public-store': true,
-    'secret-store': true,
-    'trash': true,
-    'snippets': true,
-  });
-
-  const [orderedStores, setOrderedStores] = useState<string[]>(STORE_ITEMS.map(s => s.id));
-
   useEffect(() => {
-    const savedView = localStorage.getItem("lastView");
+    const savedView = localStorage.getItem("lastView") as any;
     if (savedView) {
-      if (savedView === 'terminal') {
-          setCurrentView('steps');
-      } else {
-          setCurrentView(savedView as ViewType);
-      }
-    }
-    const savedVisibility = localStorage.getItem("visibleStores");
-    if (savedVisibility) {
-        try {
-            setVisibleStores(JSON.parse(savedVisibility));
-        } catch (e) {
-            console.error("Failed to parse visible stores", e);
-        }
-    }
-    const savedOrder = localStorage.getItem("orderedStores");
-    if (savedOrder) {
-        try {
-            const parsedOrder = JSON.parse(savedOrder);
-            // Ensure all current stores are present and no old ones remain
-            const currentIds = new Set(STORE_ITEMS.map(s => s.id));
-            const validOrder = parsedOrder.filter((id: string) => currentIds.has(id as any));
-            const missingIds = STORE_ITEMS.filter(s => !validOrder.includes(s.id)).map(s => s.id);
-            setOrderedStores([...validOrder, ...missingIds]);
-        } catch (e) {
-            console.error("Failed to parse ordered stores", e);
-        }
+      setCurrentView(savedView);
     }
   }, []);
 
   useEffect(() => {
     localStorage.setItem("lastView", currentView);
   }, [currentView]);
-
-  const toggleStoreVisibility = (id: string) => {
-      const newVisibility = { ...visibleStores, [id]: !visibleStores[id] };
-      setVisibleStores(newVisibility);
-      localStorage.setItem("visibleStores", JSON.stringify(newVisibility));
-  };
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      setOrderedStores((items) => {
-        const oldIndex = items.indexOf(active.id as string);
-        const newIndex = items.indexOf(over.id as string);
-        const newOrder = arrayMove(items, oldIndex, newIndex);
-        localStorage.setItem("orderedStores", JSON.stringify(newOrder));
-        return newOrder;
-      });
-    }
-  };
 
   const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
   const [selectedSharedSnippet, setSelectedSharedSnippet] = useState<SharedSnippet | null>(null);
@@ -483,7 +473,7 @@ export default function Home() {
   };
 
   // Helper to switch views
-  const handleViewChange = (view: ViewType) => {
+  const handleViewChange = (view: 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit' | 'terminal') => {
       setCurrentView(view);
       // Reset search when switching views (optional, but often good UX)
       // setGenericSearchQuery(""); 
@@ -636,7 +626,7 @@ export default function Home() {
                       currentView === 'link-share' ? "Search links..." :
                       currentView === 'trash' ? "Search trash..." :
                       currentView === 'todo' ? "Search todos..." :
-                      currentView === 'steps' ? "Search steps..." :
+                      currentView === 'terminal' ? "Search commands..." :
                       "Search snippets..."
                   }
                   className="pl-9 h-9 w-full"
@@ -688,7 +678,7 @@ export default function Home() {
                     <Button onClick={() => openSharedEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
                         <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Public</span><span className="sm:hidden">Add</span>
                     </Button>
-                ) : (currentView === 'todo' || currentView === 'secret-store' || currentView === 'tracker' || currentView === 'habit' || currentView === 'steps') ? null : (
+                ) : (currentView === 'todo' || currentView === 'secret-store' || currentView === 'tracker' || currentView === 'habit' || currentView === 'terminal') ? null : (
                     <Button onClick={() => openEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
                         <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Snippet</span><span className="sm:hidden">Add</span>
                     </Button>
@@ -732,9 +722,9 @@ export default function Home() {
             <div className="flex-1 h-full min-h-[500px] w-full">
                 <HabitStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} showHiddenMaster={showHiddenMaster} />
             </div>
-          ) : currentView === 'steps' ? (
+          ) : currentView === 'terminal' ? (
             <div className="flex-1 h-full min-h-[500px] w-full">
-                <StepsStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
+                <TerminalStore searchQuery={genericSearchQuery} isPrivacyMode={isPrivacyMode} />
             </div>
           ) : currentView === 'link-share' ? (
              <div className="flex-1 h-full min-h-[500px] w-full">
@@ -777,41 +767,12 @@ export default function Home() {
                     <div className="grid gap-8">
                         <section className="space-y-4">
                             <h2 className="text-2xl font-semibold">Store Settings</h2>
-                            <div className="border rounded-xl p-8 bg-card shadow-sm space-y-6">
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-medium">Visible Stores</h3>
-                                    <p className="text-sm text-muted-foreground">
-                                        Select which stores you want to see in your menu. Drag to reorder.
-                                    </p>
-                                    
-                                    <DndContext 
-                                        sensors={sensors}
-                                        collisionDetection={closestCenter}
-                                        onDragEnd={handleDragEnd}
-                                    >
-                                        <SortableContext 
-                                            items={orderedStores}
-                                            strategy={rectSortingStrategy}
-                                        >
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                {orderedStores.map((storeId) => (
-                                                    <SortableStoreItem 
-                                                        key={storeId}
-                                                        id={storeId}
-                                                        visible={visibleStores[storeId]}
-                                                        onToggle={() => toggleStoreVisibility(storeId)}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </SortableContext>
-                                    </DndContext>
-                                </div>
-                                
-                                <div className="border-t pt-6 flex items-center justify-between">
+                            <div className="border rounded-xl p-8 bg-card shadow-sm space-y-4">
+                                <div className="flex items-center justify-between">
                                     <div className="space-y-1">
                                         <p className="font-medium">Master Visibility Toggle</p>
                                         <p className="text-sm text-muted-foreground">
-                                            Show or hide items across all stores that you&apos;ve marked as &quot;hidden&quot;.
+                                            Show or hide items across all stores that you've marked as "hidden".
                                         </p>
                                     </div>
                                     <Button 

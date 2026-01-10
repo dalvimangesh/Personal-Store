@@ -1,4 +1,4 @@
-import { Clipboard, Link2, Inbox, Globe, Sparkles, Eye, Trash2, StickyNote, ListTodo, Flame, SquareKanban, Activity, Footprints } from "lucide-react";
+import { Clipboard, Link2, Inbox, Globe, Sparkles, Eye, Trash2, StickyNote, ListTodo, Flame, SquareKanban, Activity } from "lucide-react";
 
 export function FeaturesList() {
   return (
@@ -38,10 +38,6 @@ export function FeaturesList() {
       <div className="flex items-start gap-3">
         <Activity className="h-5 w-5 mt-0.5 shrink-0 text-emerald-500" />
         <span><strong>Habit Store:</strong> Build and maintain positive daily routines.</span>
-      </div>
-      <div className="flex items-start gap-3">
-        <Footprints className="h-5 w-5 mt-0.5 shrink-0 text-slate-500" />
-        <span><strong>Steps Store:</strong> Document and execute complex multi-step procedures.</span>
       </div>
       <div className="flex items-start gap-3">
         <Trash2 className="h-5 w-5 mt-0.5 shrink-0 text-muted-foreground" />

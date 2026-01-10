@@ -57,9 +57,10 @@ export async function DELETE(
       originalId: id,
       type: 'todo',
       content: {
-        ...todoContent,
+        ...foundTodo.toObject ? foundTodo.toObject() : foundTodo,
         title: decrypt(foundTodo.title),
         description: foundTodo.description ? decrypt(foundTodo.description) : undefined,
+        userId // Include userId for compatibility
       },
     });
 

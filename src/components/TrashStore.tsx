@@ -289,9 +289,15 @@ const TrashItemRow = memo(function TrashItemRow({
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
                     <TableCell colSpan={7} className="p-4">
                         <div className="flex flex-col gap-2">
-                            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Item Details</div>
+                            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Filtered Content Data</div>
                             <div className={`bg-background border rounded-md p-4 font-mono text-xs whitespace-pre-wrap max-h-[300px] overflow-auto shadow-inner ${isPrivacyMode ? "blur-sm hover:blur-none transition-all duration-300" : ""}`}>
-{JSON.stringify((({ _id, userId, originalId, ...rest }) => rest)(item.content), null, 2)}
+{JSON.stringify({
+type: item.type,
+title: item.content.title,
+content: item.type === 'todo' ? item.content.description : item.content.content,
+priority: item.type === 'todo' ? item.content.priority : undefined,
+deadline: item.type === 'todo' ? item.content.deadline : undefined
+}, null, 2)}
                             </div>
                         </div>
                     </TableCell>
