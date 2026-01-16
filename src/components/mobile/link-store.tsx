@@ -118,6 +118,8 @@ export function MobileLinkStore() {
   };
 
   const filteredCategories = categories.filter(cat => {
+    if (cat.isHidden) return false;
+    
     if (selectedFolderId && selectedFolderId !== 'all') {
         if (selectedFolderId === 'other') {
             if (cat.folderId) return false;

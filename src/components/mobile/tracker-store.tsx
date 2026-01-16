@@ -143,14 +143,14 @@ export function MobileTrackerStore() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-20">
-                {boards.length === 0 && (
+                {boards.filter(b => !(b as any).isHidden).length === 0 && (
                     <div className="text-center py-12 text-muted-foreground">
                         <Layout className="h-12 w-12 mx-auto mb-3 opacity-20" />
                         <p>No boards found.</p>
                     </div>
                 )}
                 <div className="grid grid-cols-2 gap-3">
-                    {boards.map(board => (
+                    {boards.filter(b => !(b as any).isHidden).map(board => (
                         <Card 
                             key={board.id} 
                             className="p-4 flex flex-col items-center justify-center gap-2 aspect-[4/3] active:scale-95 transition-transform cursor-pointer hover:bg-muted/50"

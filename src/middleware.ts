@@ -20,7 +20,8 @@ export async function middleware(request: NextRequest) {
     path.startsWith('/secret/') ||
     (path.startsWith('/api/secrets/') && request.method === 'GET') ||
     path.startsWith('/api/public/') ||
-    path.startsWith('/public/');
+    path.startsWith('/public/') ||
+    path === '/api/link-share/share';
 
   // If trying to access login page while logged in, redirect to home
   if (path.startsWith('/login') && session) {
