@@ -142,10 +142,12 @@ export function MobileClipboardStore() {
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground text-sm">Loading clipboard...</div>;
 
-  // Filter clipboards for root view based on search
+  // Filter clipboards for root view based on search and visibility
   const filteredClipboards = clipboards.filter(c => 
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (c.content && c.content.toLowerCase().includes(searchQuery.toLowerCase()))
+      !c.isHidden && (
+          c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+          (c.content && c.content.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
   );
 
   return (

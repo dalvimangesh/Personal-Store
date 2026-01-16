@@ -1,121 +1,102 @@
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import LinkShare from '@/models/LinkShare';
-import User from '@/models/User';
-import { NextResponse } from 'next/server';
+import QuickClip from '@/models/QuickClip';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
-import crypto from 'crypto';
+import { encrypt, decrypt } from '@/lib/encryption';
 
-export async function POST(request: Request) {
-  await dbConnect();
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const title = searchParams.get('title') || '';
+  const text = searchParams.get('text') || '';
+  const urlParam = searchParams.get('url') || '';
+
+  // Attempt to find a URL in the shared data
+  let sharedUrl = urlParam;
+  if (!sharedUrl) {
+    // LinkedIn often puts the URL in the text field
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const matches = text.match(urlRegex);
+    if (matches) {
+      sharedUrl = matches[0];
+    }
+  }
+
+  // Determine if this is a link or just text for the clipboard
+  const isLink = !!sharedUrl || title.toLowerCase().includes('http') || text.toLowerCase().includes('http');
+  const redirectPath = isLink ? '/mobileview/links' : '/mobileview/clipboard';
+
   try {
+    await dbConnect();
     const cookieStore = await cookies();
     const session = await verifySession(cookieStore.get('session')?.value);
-    
+
     if (!session?.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.redirect(new URL(`/login?callbackUrl=${encodeURIComponent(redirectPath)}`, request.url));
     }
 
-    const body = await request.json();
-    const { categoryId, action, username, ownerId } = body;
     const userId = session.userId;
 
-    if (!categoryId || !action) {
-        return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
-    }
+    if (isLink) {
+      // Save to LinkStore
+      const label = title || 'Shared Link';
+      const value = sharedUrl || text;
 
-    if (action === 'add') {
-        // Add a user to my category
-        if (!username) return NextResponse.json({ success: false, error: "Username required" }, { status: 400 });
+      const newItem = {
+        label: encrypt(label),
+        value: encrypt(value)
+      };
 
-        const linkShare = await LinkShare.findOne({ userId });
-        if (!linkShare) return NextResponse.json({ success: false, error: "LinkShare not found" }, { status: 404 });
-
-        const category = linkShare.categories.id(categoryId);
-        if (!category) return NextResponse.json({ success: false, error: "Category not found" }, { status: 404 });
-
-        const targetUser = await User.findOne({ username });
-        if (!targetUser) return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
-
-        if (targetUser._id.toString() === userId) {
-            return NextResponse.json({ success: false, error: "Cannot share with yourself" }, { status: 400 });
-        }
-
-        if (!category.sharedWith) {
-            category.sharedWith = [];
-        }
-
-        const alreadyShared = category.sharedWith.some((id: any) => id.toString() === targetUser._id.toString());
-        if (!alreadyShared) {
-            category.sharedWith.push(targetUser._id);
-            await linkShare.save();
-        }
-
-        return NextResponse.json({ success: true, data: { message: "User added" } });
-
-    } else if (action === 'remove') {
-        // Remove a user from my category
-        if (!username) return NextResponse.json({ success: false, error: "Username required" }, { status: 400 });
-
-        const linkShare = await LinkShare.findOne({ userId });
-        if (!linkShare) return NextResponse.json({ success: false, error: "LinkShare not found" }, { status: 404 });
-
-        const category = linkShare.categories.id(categoryId);
-        if (!category) return NextResponse.json({ success: false, error: "Category not found" }, { status: 404 });
-
-        const targetUser = await User.findOne({ username });
-        if (!targetUser) return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
-
-        category.sharedWith = category.sharedWith.filter((id: any) => id.toString() !== targetUser._id.toString());
-        await linkShare.save();
-
-        return NextResponse.json({ success: true, data: { message: "User removed" } });
-
-    } else if (action === 'leave') {
-        // Leave a shared category
-        if (!ownerId) return NextResponse.json({ success: false, error: "Owner ID required" }, { status: 400 });
-
-        const linkShare = await LinkShare.findOne({ userId: ownerId });
-        if (!linkShare) return NextResponse.json({ success: false, error: "Owner LinkShare not found" }, { status: 404 });
-
-        const category = linkShare.categories.id(categoryId);
-        if (!category) return NextResponse.json({ success: false, error: "Category not found" }, { status: 404 });
-
-        category.sharedWith = category.sharedWith.filter((id: any) => id.toString() !== userId);
-        await linkShare.save();
-
-        return NextResponse.json({ success: true, data: { message: "Left category" } });
-
-    } else if (action === 'public_toggle') {
-        // Toggle public access
-        const linkShare = await LinkShare.findOne({ userId });
-        if (!linkShare) return NextResponse.json({ success: false, error: "LinkShare not found" }, { status: 404 });
-
-        const category = linkShare.categories.id(categoryId);
-        if (!category) return NextResponse.json({ success: false, error: "Category not found" }, { status: 404 });
-
-        category.isPublic = !category.isPublic;
-        
-        if (category.isPublic && !category.publicToken) {
-            category.publicToken = crypto.randomUUID();
-        }
-
-        await linkShare.save();
-
-        return NextResponse.json({ 
-            success: true, 
-            data: { 
-                isPublic: category.isPublic, 
-                publicToken: category.publicToken 
-            } 
+      let linkShare = await LinkShare.findOne({ userId });
+      if (!linkShare) {
+        linkShare = new LinkShare({
+          userId,
+          categories: [{ name: encrypt('Default'), items: [newItem] }]
         });
+      } else {
+        if (linkShare.categories.length === 0 && linkShare.items && linkShare.items.length > 0) {
+          linkShare.categories.push({ name: encrypt('Default'), items: [...linkShare.items, newItem] });
+          linkShare.items = [];
+        } else {
+          const defaultCat = linkShare.categories.find((cat: { name: string }) => {
+            try { return decrypt(cat.name) === 'Default'; } catch { return false; }
+          });
+          if (defaultCat) {
+            defaultCat.items.push(newItem);
+          } else if (linkShare.categories.length > 0) {
+            linkShare.categories[0].items.push(newItem);
+          } else {
+            linkShare.categories.push({ name: encrypt('Default'), items: [newItem] });
+          }
+        }
+      }
+      await linkShare.save();
+    } else {
+      // Save to QuickClip (Clipboard)
+      const content = text || title;
+      if (content) {
+        let quickClip = await QuickClip.findOne({ userId });
+        const newClipboard = {
+          name: encrypt(`Shared: ${new Date().toLocaleDateString()}`),
+          content: encrypt(content)
+        };
+
+        if (!quickClip) {
+          quickClip = new QuickClip({
+            userId,
+            clipboards: [newClipboard]
+          });
+        } else {
+          // Push to the beginning of clipboards
+          quickClip.clipboards.unshift(newClipboard);
+        }
+        await quickClip.save();
+      }
     }
-
-    return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 });
-
-  } catch (error: any) {
-    console.error("Share Error:", error);
-    return NextResponse.json({ success: false, error: error.message || "An unknown error occurred" }, { status: 500 });
+  } catch (error) {
+    console.error('Share Target Error:', error);
   }
-}
 
+  return NextResponse.redirect(new URL(redirectPath, request.url));
+}
