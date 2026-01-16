@@ -55,7 +55,6 @@ export function MobileTrashStore() {
   };
 
   const filteredItems = items.filter(item => {
-      if (item.content.isHidden) return false;
       const q = searchQuery.toLowerCase();
       const title = item.content.title || item.content.content || "";
       return title.toLowerCase().includes(q) || item.type.toLowerCase().includes(q);

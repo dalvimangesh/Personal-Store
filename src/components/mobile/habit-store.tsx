@@ -4,11 +4,11 @@ import { useState } from "react";
 import { useHabits } from "@/hooks/useHabits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Check, Flame, ChevronRight, Activity, ArrowLeft, Trash2, Calendar, Target, TrendingUp, Loader2 } from "lucide-react";
+import { Plus, Search, Check, Flame, ChevronRight, Activity, ArrowLeft, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { format, subDays, isSameDay, eachDayOfInterval } from "date-fns";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 export function MobileHabitStore() {
@@ -42,117 +42,62 @@ export function MobileHabitStore() {
   const today = new Date();
   const dateStr = format(today, "yyyy-MM-dd");
 
-  const last7Days = eachDayOfInterval({
-    start: subDays(today, 6),
-    end: today
-  });
-
   const selectedHabit = habits.find(h => h.id === selectedHabitId);
 
-  if (isLoading) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Loading your habits...</p>
-    </div>
-  );
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground text-sm">Loading habits...</div>;
 
-  const filteredHabits = habits.filter(h => 
-    !h.isHidden && 
-    h.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredHabits = habits.filter(h => h.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
   if (selectedHabit) {
-      const streak = calculateStreak(selectedHabit.logs);
-      const totalDays = selectedHabit.logs?.filter(l => l.completed).length || 0;
-      const daysSinceCreation = calculateDaysSinceCreation(selectedHabit.createdAt.toString());
-      const consistency = Math.round((totalDays / daysSinceCreation) * 100);
-
       return (
-        <div className="flex flex-col h-full bg-background animate-in slide-in-from-right duration-300">
+        <div className="flex flex-col h-full bg-background">
             <div className="flex items-center gap-2 p-3 border-b bg-background sticky top-0 z-10">
-                <Button variant="ghost" size="icon" onClick={() => setSelectedHabitId(null)} className="shrink-0">
+                <Button variant="ghost" size="icon" onClick={() => setSelectedHabitId(null)}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <h2 className="font-bold text-base truncate flex-1 min-w-0">{selectedHabit.title}</h2>
+                <h2 className="font-semibold text-sm truncate flex-1">{selectedHabit.title}</h2>
                 <Button variant="ghost" size="icon" onClick={async () => {
                     if(confirm("Delete this habit?")) {
                         await deleteHabit(selectedHabit.id);
                         setSelectedHabitId(null);
                     }
-                }} className="shrink-0">
+                }}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                {/* Stats Header */}
-                <div className="grid grid-cols-1 gap-4">
-                    <Card className="p-6 bg-gradient-to-br from-orange-500 to-red-600 text-white border-none shadow-lg relative overflow-hidden">
-                        <Flame className="absolute -right-4 -bottom-4 h-32 w-32 opacity-20 rotate-12" />
-                        <div className="relative min-w-0">
-                            <p className="text-orange-100 text-xs font-bold uppercase tracking-widest mb-1">Current Streak</p>
-                            <div className="flex items-baseline gap-2 overflow-hidden">
-                                <span className="text-5xl font-black truncate">{streak}</span>
-                                <span className="text-xl font-bold shrink-0">days</span>
-                            </div>
+            <div className="flex-1 p-6 space-y-6 bg-muted/5">
+                <Card className="p-6 text-center space-y-4 bg-card shadow-sm border-muted">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center">
+                        <Flame className="h-8 w-8 text-orange-500" />
+                    </div>
+                    <div>
+                        <div className="text-4xl font-bold tracking-tighter">
+                            {calculateStreak(selectedHabit.logs)}
                         </div>
-                    </Card>
-                </div>
+                        <div className="text-sm text-muted-foreground font-medium uppercase tracking-widest mt-1">
+                            Current Streak
+                        </div>
+                    </div>
+                </Card>
 
                 <div className="grid grid-cols-2 gap-4">
-                    <Card className="p-4 flex flex-col items-center justify-center gap-2 bg-card border-muted shadow-sm min-w-0">
-                        <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
-                            <Target className="h-5 w-5 text-green-600" />
+                    <Card className="p-4 text-center bg-card shadow-sm border-muted">
+                        <div className="text-2xl font-bold">
+                            {selectedHabit.logs?.filter(l => l.completed).length || 0}
                         </div>
-                        <div className="text-center w-full min-w-0">
-                            <p className="text-2xl font-bold truncate">{totalDays}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider truncate">Total Hits</p>
-                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">Total Days</div>
                     </Card>
-                    <Card className="p-4 flex flex-col items-center justify-center gap-2 bg-card border-muted shadow-sm min-w-0">
-                        <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-                            <TrendingUp className="h-5 w-5 text-blue-600" />
+                    <Card className="p-4 text-center bg-card shadow-sm border-muted">
+                        <div className="text-2xl font-bold">
+                            {Math.round(((selectedHabit.logs?.filter(l => l.completed).length || 0) / Math.max(1, calculateDaysSinceCreation(selectedHabit.createdAt.toString()))) * 100)}%
                         </div>
-                        <div className="text-center w-full min-w-0">
-                            <p className="text-2xl font-bold truncate">{consistency}%</p>
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider truncate">Consistency</p>
-                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">Consistency</div>
                     </Card>
-                </div>
-
-                {/* Recent Activity */}
-                <div className="space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Last 7 Days</h3>
-                    <div className="flex justify-between gap-1">
-                        {last7Days.map((date, i) => {
-                            const dStr = format(date, "yyyy-MM-dd");
-                            const isDone = selectedHabit.logs?.some(l => l.date === dStr && l.completed);
-                            const isToday = isSameDay(date, today);
-                            return (
-                                <div key={i} className="flex flex-col items-center gap-2 flex-1">
-                                    <span className={cn(
-                                        "text-[10px] font-bold uppercase",
-                                        isToday ? "text-primary" : "text-muted-foreground"
-                                    )}>
-                                        {format(date, "EEE")}
-                                    </span>
-                                    <div className={cn(
-                                        "w-full aspect-square rounded-lg flex items-center justify-center transition-all",
-                                        isDone 
-                                            ? "bg-green-500 text-white shadow-sm shadow-green-500/20" 
-                                            : "bg-muted/50 border-2 border-dashed border-muted-foreground/20"
-                                    )}>
-                                        {isDone && <Check className="h-4 w-4" strokeWidth={4} />}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
                 </div>
 
                 {selectedHabit.description && (
-                    <div className="p-4 rounded-xl bg-muted/30 text-sm text-muted-foreground italic relative">
-                        <span className="absolute -top-2 left-4 px-2 bg-background text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Note</span>
+                    <div className="p-4 rounded-lg bg-muted/50 text-sm text-muted-foreground italic text-center">
                         "{selectedHabit.description}"
                     </div>
                 )}
@@ -162,113 +107,89 @@ export function MobileHabitStore() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background animate-in fade-in duration-500">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
-      <div className="flex items-center gap-2 p-4 border-b bg-background/95 backdrop-blur sticky top-0 z-10">
+      <div className="flex items-center gap-2 p-4 border-b bg-background sticky top-0 z-10">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            className="pl-9 h-10 bg-muted/40 border-none rounded-xl" 
+            className="pl-9 h-9" 
             placeholder="Search habits..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Button size="icon" onClick={() => setIsAddOpen(true)} className="h-10 w-10 shrink-0 rounded-xl shadow-lg shadow-primary/20">
+        <Button size="icon" onClick={() => setIsAddOpen(true)} className="h-9 w-9 shrink-0">
           <Plus className="h-5 w-5" />
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-20">
-        <div className="flex items-center justify-between px-1">
-            <div className="space-y-0.5">
-                <h2 className="text-lg font-bold tracking-tight">Today</h2>
-                <p className="text-xs text-muted-foreground font-medium">
-                    {format(today, "EEEE, MMMM do")}
-                </p>
-            </div>
-            <Calendar className="h-5 w-5 text-muted-foreground/40" />
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-20">
+        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
+            {format(today, "EEEE, MMMM do")}
         </div>
         
         {filteredHabits.length === 0 && (
-            <div className="text-center py-20 text-muted-foreground animate-in zoom-in duration-300">
-                <div className="h-20 w-20 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Activity className="h-10 w-10 opacity-20" />
-                </div>
-                <h3 className="font-bold text-lg text-foreground">No habits yet</h3>
-                <p className="text-sm max-w-[200px] mx-auto mt-1">Start small and build your consistency today!</p>
+            <div className="text-center py-12 text-muted-foreground">
+                <Activity className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p>No habits found</p>
             </div>
         )}
 
-        <div className="grid grid-cols-1 gap-3">
-            {filteredHabits.map((habit) => {
-                const isDoneToday = habit.logs?.some(l => l.date === dateStr && l.completed);
-                const streak = calculateStreak(habit.logs);
+        {filteredHabits.map((habit) => {
+            const isDoneToday = habit.logs?.some(l => l.date === dateStr && l.completed);
+            const streak = calculateStreak(habit.logs);
 
-                return (
-                    <Card 
-                        key={habit.id} 
-                        className={cn(
-                            "p-4 flex items-center justify-between transition-all active:scale-[0.98] border shadow-sm rounded-2xl overflow-hidden relative group",
-                            isDoneToday 
-                                ? "bg-green-500/5 border-green-500/30" 
-                                : "bg-card border-border hover:border-primary/20"
-                        )}
-                        onClick={() => setSelectedHabitId(habit.id)}
-                    >
-                        <div className="flex-1 min-w-0 pr-4 relative z-10">
-                            <div className="flex items-center gap-2 mb-1.5">
-                                <h3 className={cn(
-                                    "font-bold text-base truncate leading-none transition-colors",
-                                    isDoneToday ? "text-green-600 dark:text-green-400" : "text-foreground"
-                                )}>{habit.title}</h3>
-                            </div>
-                            <div className="flex items-center gap-2 overflow-hidden">
-                                 {streak > 0 ? (
-                                    <Badge variant="secondary" className={cn(
-                                        "h-5 px-1.5 text-[10px] gap-1 border-0 font-bold uppercase tracking-wider transition-colors shrink-0",
-                                        isDoneToday 
-                                            ? "bg-green-500/20 text-green-700 dark:text-green-400" 
-                                            : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
-                                    )}>
-                                        <Flame className={cn("h-3 w-3 fill-current", isDoneToday ? "text-green-500" : "text-orange-500")} />
-                                        <span className="truncate">{streak} day streak</span>
-                                    </Badge>
-                                ) : habit.description ? (
-                                    <p className="text-xs text-muted-foreground line-clamp-1 italic font-medium break-words">
-                                        {habit.description}
-                                    </p>
-                                ) : (
-                                    <p className="text-[10px] text-muted-foreground/60 uppercase font-bold tracking-widest truncate">Daily Goal</p>
-                                )}
-                            </div>
+            return (
+                <Card 
+                    key={habit.id} 
+                    className={cn(
+                        "p-4 flex items-center justify-between transition-all active:scale-[0.98] border-l-4",
+                        isDoneToday 
+                            ? "bg-green-50/50 dark:bg-green-900/10 border-green-500" 
+                            : "bg-card border-transparent hover:border-muted-foreground/20"
+                    )}
+                    onClick={() => setSelectedHabitId(habit.id)}
+                >
+                    <div className="flex-1 min-w-0 pr-4">
+                        <div className="flex items-center gap-2 mb-1.5">
+                            <h3 className={cn(
+                                "font-semibold text-base truncate leading-none",
+                                isDoneToday && "text-green-700 dark:text-green-400"
+                            )}>{habit.title}</h3>
                         </div>
-
-                        <Button
-                            size="icon"
-                            variant={isDoneToday ? "default" : "outline"}
-                            className={cn(
-                                "h-14 w-14 shrink-0 rounded-2xl transition-all duration-300 relative z-10",
-                                isDoneToday 
-                                    ? "bg-green-500 hover:bg-green-600 text-white border-green-600 shadow-lg shadow-green-500/20" 
-                                    : "border-2 bg-background hover:bg-muted"
+                        <div className="flex items-center gap-2">
+                             {streak > 0 && (
+                                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] gap-1 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-0 font-medium">
+                                    <Flame className="h-3 w-3 fill-current" />
+                                    {streak} day streak
+                                </Badge>
                             )}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                toggleHabitLog(habit.id, dateStr, !isDoneToday, isDoneToday ? undefined : 5)
-                            }} 
-                        >
-                            <Check className={cn("h-8 w-8 transition-all duration-500", isDoneToday ? "scale-110 rotate-0" : "scale-50 opacity-10 -rotate-45")} strokeWidth={4} />
-                        </Button>
-                        
-                        {/* Subtle progress indicator or background glow */}
-                        {isDoneToday && (
-                            <div className="absolute top-0 right-0 w-24 h-full bg-gradient-to-l from-green-500/10 to-transparent pointer-events-none" />
+                            {habit.description && !streak && (
+                                <p className="text-xs text-muted-foreground line-clamp-1">{habit.description}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <Button
+                        size="icon"
+                        variant={isDoneToday ? "default" : "outline"}
+                        className={cn(
+                            "h-12 w-12 shrink-0 rounded-full transition-all shadow-sm",
+                            isDoneToday 
+                                ? "bg-green-500 hover:bg-green-600 text-white border-green-600 ring-2 ring-green-100 dark:ring-green-900" 
+                                : "border-2 hover:bg-muted"
                         )}
-                    </Card>
-                );
-            })}
-        </div>
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleHabitLog(habit.id, dateStr, !isDoneToday, isDoneToday ? undefined : 5)
+                        }} 
+                    >
+                        <Check className={cn("h-6 w-6 transition-all", isDoneToday ? "scale-100" : "scale-75 opacity-20")} strokeWidth={3} />
+                    </Button>
+                </Card>
+            );
+        })}
       </div>
 
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>

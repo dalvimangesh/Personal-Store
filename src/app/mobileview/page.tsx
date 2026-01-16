@@ -16,39 +16,17 @@ import {
   Trash2,
   Sparkles,
   Search,
-  User as UserIcon,
-  GripVertical,
-  Settings2,
-  Check
+  User as UserIcon
 } from "lucide-react";
 import { ModeToggle } from "@/components/ModeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
 import { SmartEditor } from "@/components/SmartEditor";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useSnippets } from "@/hooks/useSnippets";
-import {
-  DndContext, 
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  TouchSensor,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { cn } from "@/lib/utils";
 
-const INITIAL_FEATURES = [
+const features = [
   {
     id: "snippets",
     icon: <StickyNote className="h-6 w-6 text-blue-500" />,
@@ -135,99 +113,16 @@ const INITIAL_FEATURES = [
   }
 ];
 
-function SortableFeatureCard({ feature, isEditMode }: { feature: typeof INITIAL_FEATURES[0], isEditMode: boolean }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: feature.id, disabled: !isEditMode });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : 1,
-  };
-
-  const content = (
-    <div className="flex flex-col items-center justify-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent/50 transition-all active:scale-95 h-full w-full relative">
-      {isEditMode && (
-        <div className="absolute top-2 right-2 text-muted-foreground/40">
-          <GripVertical className="h-4 w-4" />
-        </div>
-      )}
-      <div className={`p-3 rounded-full ${feature.color}`}>
-        {feature.icon}
-      </div>
-      <div className="text-center">
-        <h3 className="font-semibold text-sm">{feature.title}</h3>
-        <p className="text-[10px] text-muted-foreground">{feature.desc}</p>
-      </div>
-    </div>
-  );
-
-  return (
-    <div ref={setNodeRef} style={style} className={cn("h-full", isDragging && "opacity-50")} {...(isEditMode ? { ...attributes, ...listeners } : {})}>
-      {isEditMode ? (
-        <div className="h-full cursor-grab active:cursor-grabbing">
-          {content}
-        </div>
-      ) : (
-        <Link href={`/mobileview/${feature.id}`} className="h-full block">
-          {content}
-        </Link>
-      )}
-    </div>
-  );
-}
-
 export default function MobileHomePage() {
   const [search, setSearch] = useState("");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [username, setUsername] = useState("");
   const [isSmartEditorOpen, setIsSmartEditorOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [orderedFeatures, setOrderedFeatures] = useState(INITIAL_FEATURES);
   
   // Use snippets hook for Smart Editor auto-complete
   const { snippets } = useSnippets();
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250,
-        tolerance: 5,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
   useEffect(() => {
-    const savedOrder = localStorage.getItem("mobileFeatureOrder");
-    if (savedOrder) {
-      try {
-        const parsedOrder = JSON.parse(savedOrder);
-        const newOrderedFeatures = parsedOrder.map((id: string) => 
-          INITIAL_FEATURES.find(f => f.id === id)
-        ).filter(Boolean);
-        
-        // Add any new features that weren't in the saved order
-        const missingFeatures = INITIAL_FEATURES.filter(f => !parsedOrder.includes(f.id));
-        setOrderedFeatures([...newOrderedFeatures, ...missingFeatures]);
-      } catch (e) {
-        console.error("Failed to parse saved order", e);
-      }
-    }
-
     fetch("/api/auth/me")
       .then(res => res.json())
       .then(data => {
@@ -238,26 +133,9 @@ export default function MobileHomePage() {
       .catch(err => console.error(err));
   }, []);
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      setOrderedFeatures((items) => {
-        const oldIndex = items.findIndex(i => i.id === active.id);
-        const newIndex = items.findIndex(i => i.id === over.id);
-        const newOrder = arrayMove(items, oldIndex, newIndex);
-        localStorage.setItem("mobileFeatureOrder", JSON.stringify(newOrder.map(f => f.id)));
-        return newOrder;
-      });
-    }
-  };
-
-  const filteredFeatures = useMemo(() => 
-    orderedFeatures.filter(f => 
-      f.title.toLowerCase().includes(search.toLowerCase()) || 
-      f.desc.toLowerCase().includes(search.toLowerCase())
-    ),
-    [orderedFeatures, search]
+  const filteredFeatures = features.filter(f => 
+    f.title.toLowerCase().includes(search.toLowerCase()) || 
+    f.desc.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -277,14 +155,6 @@ export default function MobileHomePage() {
            <span className="font-bold text-lg tracking-tight">Personal Store</span>
         </div>
         <div className="flex items-center gap-1">
-           <Button 
-             variant="ghost" 
-             size="icon" 
-             onClick={() => setIsEditMode(!isEditMode)} 
-             className={cn(isEditMode ? "text-primary bg-primary/10" : "text-muted-foreground")}
-           >
-             {isEditMode ? <Check className="h-5 w-5" /> : <Settings2 className="h-5 w-5" />}
-           </Button>
            <Button variant="ghost" size="icon" onClick={() => setIsSmartEditorOpen(true)} className="text-yellow-500">
              <Sparkles className="h-5 w-5" />
            </Button>
@@ -310,29 +180,26 @@ export default function MobileHomePage() {
 
       {/* Grid */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
-        <DndContext 
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext 
-            items={filteredFeatures.map(f => f.id)}
-            strategy={rectSortingStrategy}
-          >
-            <div className="grid grid-cols-2 gap-3">
-              {filteredFeatures.map((feature) => (
-                <SortableFeatureCard 
-                  key={feature.id} 
-                  feature={feature} 
-                  isEditMode={isEditMode} 
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+        <div className="grid grid-cols-2 gap-3">
+          {filteredFeatures.map((feature) => (
+            <Link 
+              href={`/mobileview/${feature.id}`} 
+              key={feature.id}
+              className="flex flex-col items-center justify-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent/50 transition-all active:scale-95"
+            >
+              <div className={`p-3 rounded-full ${feature.color}`}>
+                {feature.icon}
+              </div>
+              <div className="text-center">
+                <h3 className="font-semibold text-sm">{feature.title}</h3>
+                <p className="text-[10px] text-muted-foreground">{feature.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
         
         <div className="mt-6 text-center text-xs text-muted-foreground/40">
-           v1.0.0 • {isEditMode ? "Editing Layout" : "Mobile View"}
+           v1.0.0 • Mobile View
         </div>
       </div>
 
