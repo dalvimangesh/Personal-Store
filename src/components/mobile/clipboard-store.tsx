@@ -144,8 +144,10 @@ export function MobileClipboardStore() {
 
   // Filter clipboards for root view based on search
   const filteredClipboards = clipboards.filter(c => 
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (c.content && c.content.toLowerCase().includes(searchQuery.toLowerCase()))
+      !c.isHidden && (
+          c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+          (c.content && c.content.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
   );
 
   return (

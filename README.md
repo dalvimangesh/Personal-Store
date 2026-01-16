@@ -4,12 +4,18 @@ Stop cluttering your chat apps with self-messages. Seamlessly share information 
 
 🔗 **Live:** [https://personal-store-alpha.vercel.app](https://personal-store-alpha.vercel.app)
 
-🔗 [Medium Article](https://medium.com/@dalvimangesh000/i-built-personal-store-because-i-was-tired-of-texting-myself-99e9b7276c84)
+### 📲 Install as an App
+For the best experience on mobile, you can install Personal Store as a PWA:
+1. Open the [Live link](https://personal-store-alpha.vercel.app) in **Chrome** on your mobile device.
+2. Tap the **three-dot menu** (⋮) in the top-right corner.
+3. Select **"Add to Home Screen"** or **"Install app"**.
+4. Click **Install** to add it to your app drawer.
 
 <img width="2752" height="1536" alt="Gemini_Generated_Image_algrn9algrn9algr" src="https://github.com/user-attachments/assets/f36591d8-5105-49bf-9cdf-1ac5aa132633" />
 
 ## Features
 
+- **📱 Mobile-First Design:** Optimized interface for seamless use on smartphones with a dedicated mobile dashboard.
 - **📝 Snippet Store:** Organize code and text snippets with tags, search, and privacy controls.
 - **📋 Clipboard Store:** Quick access to your temporary clipboard history.
 - **📝 Todo Store:** Manage tasks with priority & deadlines.
