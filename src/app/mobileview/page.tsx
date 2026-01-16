@@ -16,6 +16,7 @@ import {
   Trash2,
   Sparkles,
   Search,
+  Settings,
   User as UserIcon
 } from "lucide-react";
 import { ModeToggle } from "@/components/ModeToggle";
@@ -23,6 +24,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
 import { SmartEditor } from "@/components/SmartEditor";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { useSnippets } from "@/hooks/useSnippets";
 
@@ -116,6 +126,8 @@ const features = [
 export default function MobileHomePage() {
   const [search, setSearch] = useState("");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
   const [username, setUsername] = useState("");
   const [isSmartEditorOpen, setIsSmartEditorOpen] = useState(false);
   
@@ -123,6 +135,18 @@ export default function MobileHomePage() {
   const { snippets } = useSnippets();
 
   useEffect(() => {
+    // Load visible features from localStorage
+    const saved = localStorage.getItem("mobile_visible_features");
+    if (saved) {
+      try {
+        setVisibleFeatures(JSON.parse(saved));
+      } catch (e) {
+        setVisibleFeatures(features.map(f => f.id));
+      }
+    } else {
+      setVisibleFeatures(features.map(f => f.id));
+    }
+
     fetch("/api/auth/me")
       .then(res => res.json())
       .then(data => {
@@ -133,9 +157,21 @@ export default function MobileHomePage() {
       .catch(err => console.error(err));
   }, []);
 
+  const toggleFeature = (id: string) => {
+    setVisibleFeatures(prev => {
+      const next = prev.includes(id) 
+        ? prev.filter(f => f !== id) 
+        : [...prev, id];
+      localStorage.setItem("mobile_visible_features", JSON.stringify(next));
+      return next;
+    });
+  };
+
   const filteredFeatures = features.filter(f => 
-    f.title.toLowerCase().includes(search.toLowerCase()) || 
-    f.desc.toLowerCase().includes(search.toLowerCase())
+    visibleFeatures.includes(f.id) && (
+      f.title.toLowerCase().includes(search.toLowerCase()) || 
+      f.desc.toLowerCase().includes(search.toLowerCase())
+    )
   );
 
   return (
@@ -157,6 +193,9 @@ export default function MobileHomePage() {
         <div className="flex items-center gap-1">
            <Button variant="ghost" size="icon" onClick={() => setIsSmartEditorOpen(true)} className="text-yellow-500">
              <Sparkles className="h-5 w-5" />
+           </Button>
+           <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)}>
+             <Settings className="h-5 w-5 text-muted-foreground" />
            </Button>
            <ModeToggle />
            <Button variant="ghost" size="icon" onClick={() => setIsProfileOpen(true)}>
@@ -209,6 +248,41 @@ export default function MobileHomePage() {
         username={username}
         onUpdate={setUsername}
       />
+
+      {/* Feature Visibility Dialog */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Customize Home</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <p className="text-xs text-muted-foreground mb-2">Toggle the apps you want to see on your home screen.</p>
+            <div className="grid grid-cols-1 gap-3">
+              {features.map((feature) => (
+                <div key={feature.id} className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-full ${feature.color} scale-75`}>
+                      {feature.icon}
+                    </div>
+                    <div>
+                      <Label htmlFor={`feat-${feature.id}`} className="font-medium cursor-pointer text-sm">{feature.title}</Label>
+                      <p className="text-[10px] text-muted-foreground">{feature.desc}</p>
+                    </div>
+                  </div>
+                  <Checkbox 
+                    id={`feat-${feature.id}`}
+                    checked={visibleFeatures.includes(feature.id)}
+                    onCheckedChange={() => toggleFeature(feature.id)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsSettingsOpen(false)} className="w-full">Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Smart Editor Full Screen Overlay */}
       {isSmartEditorOpen && (

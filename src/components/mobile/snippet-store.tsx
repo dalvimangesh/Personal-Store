@@ -40,6 +40,15 @@ export function MobileSnippetStore() {
     toast.success("Content copied");
   };
 
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground text-sm">Loading...</div>;
+
+  const filteredSnippets = snippets.filter(snippet => {
+    const matchesSearch = snippet.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         snippet.content.toLowerCase().includes(searchQuery.toLowerCase());
+    const isActuallyHidden = snippet.isHidden || snippet.isHiding;
+    return matchesSearch && !isActuallyHidden;
+  });
+
   if (isEditorOpen) {
     return (
       <div className="fixed inset-0 z-50 bg-background">
@@ -80,15 +89,13 @@ export function MobileSnippetStore() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-20">
-        {isLoading ? (
-          <div className="text-center py-8 text-muted-foreground text-sm">Loading...</div>
-        ) : snippets.length === 0 ? (
+        {filteredSnippets.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <StickyNote className="h-12 w-12 mx-auto mb-3 opacity-20" />
-            <p>No snippets found</p>
+            <p>{searchQuery ? "No matching snippets found" : "No snippets found"}</p>
           </div>
         ) : (
-          snippets.map((snippet) => (
+          filteredSnippets.map((snippet) => (
             <Card 
               key={snippet.id} 
               className="p-3 flex flex-col gap-3 active:scale-[0.99] transition-transform"

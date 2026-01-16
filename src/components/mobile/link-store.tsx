@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, ExternalLink, Copy, Folder, ChevronRight, ArrowLeft, Link2 } from "lucide-react";
+import { Plus, Search, ExternalLink, Copy, Folder, ChevronRight, ArrowLeft, Link2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -118,6 +118,9 @@ export function MobileLinkStore() {
   };
 
   const filteredCategories = categories.filter(cat => {
+    // Hide categories marked as hidden in mobile view
+    if (cat.isHidden) return false;
+
     if (selectedFolderId && selectedFolderId !== 'all') {
         if (selectedFolderId === 'other') {
             if (cat.folderId) return false;
@@ -147,7 +150,20 @@ export function MobileLinkStore() {
       return true;
   });
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground text-sm">Loading links...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-full bg-background">
+        <div className="flex items-center gap-2 p-4 border-b bg-background">
+          <div className="h-9 flex-1 bg-muted animate-pulse rounded-md" />
+          <div className="h-9 w-9 bg-muted animate-pulse rounded-md" />
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin mb-4 text-orange-500" />
+          <p className="text-sm font-medium">Loading links...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-background">
