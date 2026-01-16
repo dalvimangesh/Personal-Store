@@ -1,11 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, userAgent } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifySession } from '@/lib/auth';
 
 export async function middleware(request: NextRequest) {
+  const { device } = userAgent(request);
+  const path = request.nextUrl.pathname;
+
+  // Mobile Redirection: If mobile/tablet and at root, redirect to mobileview
+  if ((device.type === 'mobile' || device.type === 'tablet') && path === '/') {
+    return NextResponse.redirect(new URL('/mobileview', request.url));
+  }
+
   const cookie = request.cookies.get('session');
   const session = await verifySession(cookie?.value);
-  const path = request.nextUrl.pathname;
 
   // Public Routes that don't require auth
   const isPublicRoute = 

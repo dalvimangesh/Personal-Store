@@ -50,7 +50,7 @@ export function useSteps() {
     fetchSteps();
   }, [fetchSteps]);
 
-  const addStep = useCallback(async (step: Omit<TerminalCommand, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addStep = useCallback(async (step: Omit<TerminalCommand, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
     try {
       const res = await fetch('/api/steps', {
         method: 'POST',

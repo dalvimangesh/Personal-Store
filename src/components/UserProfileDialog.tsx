@@ -7,21 +7,27 @@ import { toast } from "sonner";
 import { User } from "lucide-react";
 
 interface UserProfileDialogProps {
-  username: string;
-  onUpdate: (newUsername: string) => void;
+  username?: string;
+  onUpdate?: (newUsername: string) => void;
   children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function UserProfileDialog({ username, onUpdate, children }: UserProfileDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [newUsername, setNewUsername] = useState(username);
+export function UserProfileDialog({ username = "", onUpdate, children, open, onOpenChange }: UserProfileDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : internalOpen;
+  const setIsOpen = isControlled ? onOpenChange : setInternalOpen;
+
+  const [newUsername, setNewUsername] = useState(username || "");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setNewUsername(username);
+      setNewUsername(username || "");
       setNewPassword("");
       setConfirmPassword("");
     }
@@ -58,9 +64,11 @@ export function UserProfileDialog({ username, onUpdate, children }: UserProfileD
         throw new Error(data.error || "Failed to update profile");
       }
 
-      onUpdate(data.user.username);
+      if (onUpdate) {
+        onUpdate(data.user.username);
+      }
       toast.success("Profile updated successfully");
-      setIsOpen(false);
+      if (setIsOpen) setIsOpen(false);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         toast.error(errorMessage);
@@ -71,14 +79,16 @@ export function UserProfileDialog({ username, onUpdate, children }: UserProfileD
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {children || (
-          <Button variant="ghost" className="gap-2">
-            <User className="h-4 w-4" />
-            {username}
-          </Button>
-        )}
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          {children || (
+            <Button variant="ghost" className="gap-2">
+              <User className="h-4 w-4" />
+              {username}
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
