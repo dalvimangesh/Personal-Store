@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Flame, ShieldAlert, Copy, ArrowRight, Lock, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function SecretPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params); // Unwrap params in Next.js 15+
@@ -43,8 +44,14 @@ export default function SecretPage({ params }: { params: Promise<{ id: string }>
         <div className="max-w-lg w-full space-y-8">
             <div className="text-center space-y-2">
                 <Link href="/" className="inline-flex items-center justify-center gap-2 font-bold text-xl hover:opacity-80 transition-opacity">
-                    <div className="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center">
-                        <span className="font-bold">P</span>
+                    <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center p-1">
+                        <Image 
+                            src="/logo.svg" 
+                            alt="Personal Store Logo" 
+                            width={24} 
+                            height={24} 
+                            className="invert dark:invert-0"
+                        />
                     </div>
                     Personal Store
                 </Link>
