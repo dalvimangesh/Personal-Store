@@ -73,3 +73,8 @@ const HighlightedTextarea = React.forwardRef<HTMLTextAreaElement, HighlightedTex
 HighlightedTextarea.displayName = "HighlightedTextarea"
 
 export { HighlightedTextarea }
+
+
+
+
+

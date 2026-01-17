@@ -18,9 +18,9 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
   const [text, setText] = useState("");
   const [suggestions, setSuggestions] = useState<Snippet[]>([]);
   const [cursorIndex, setCursorIndex] = useState<number | null>(null);
-  const [geminiResponse, setGeminiResponse] = useState("");
-  const [isGeminiLoading, setIsGeminiLoading] = useState(false);
-  const [showGemini, setShowGemini] = useState(false);
+  const [aiResponse, setAiResponse] = useState("");
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [showAi, setShowAi] = useState(false);
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
   const [showVariables, setShowVariables] = useState(false);
   const [hasShownVariables, setHasShownVariables] = useState(false);
@@ -145,12 +145,42 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
     textareaRef.current.focus();
   }, [text, cursorIndex]);
 
+  const handleAskAI = useCallback(async () => {
+    if (!text.trim()) return;
+    
+    setIsAiLoading(true);
+    setShowAi(true);
+    setAiResponse("");
+
+    try {
+      const res = await fetch("/api/llm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to fetch");
+      }
+
+      const data = await res.json();
+      setAiResponse(data.result);
+    } catch (error: any) {
+      console.error(error);
+      setAiResponse(error.message || "Error fetching response from AI. Please try again.");
+    } finally {
+      setIsAiLoading(false);
+    }
+  }, [text]);
+
+  // Keep Gemini implementation for reference but not used in UI
   const handleAskGemini = useCallback(async () => {
     if (!text.trim()) return;
     
-    setIsGeminiLoading(true);
-    setShowGemini(true);
-    setGeminiResponse("");
+    setIsAiLoading(true);
+    setShowAi(true);
+    setAiResponse("");
 
     try {
       const res = await fetch("/api/gemini", {
@@ -165,12 +195,12 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
       }
 
       const data = await res.json();
-      setGeminiResponse(data.result);
+      setAiResponse(data.result);
     } catch (error: any) {
       console.error(error);
-      setGeminiResponse(error.message || "Error fetching response from Gemini. Please try again.");
+      setAiResponse(error.message || "Error fetching response from Gemini. Please try again.");
     } finally {
-      setIsGeminiLoading(false);
+      setIsAiLoading(false);
     }
   }, [text]);
 
@@ -209,8 +239,8 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
       
       <div className="flex-1 relative flex flex-col overflow-hidden">
         <div className={`relative flex flex-col transition-all duration-300 ${
-          (showGemini && showVariables && variables.length > 0) ? "h-1/3 border-b" :
-          (showGemini || (showVariables && variables.length > 0)) ? "h-1/2 border-b" : 
+          (showAi && showVariables && variables.length > 0) ? "h-1/3 border-b" :
+          (showAi || (showVariables && variables.length > 0)) ? "h-1/2 border-b" : 
           "h-full"
         }`}>
           <div className="flex-1 relative w-full min-h-0">
@@ -253,7 +283,7 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
 
         {showVariables && variables.length > 0 && (
           <div className={`flex flex-col bg-muted/5 relative animate-in slide-in-from-bottom-10 duration-300 ${
-            showGemini ? 'h-1/3 border-b' : 'flex-1'
+            showAi ? 'h-1/3 border-b' : 'flex-1'
           } overflow-hidden`}>
             <div className="p-2 border-b flex items-center justify-between bg-muted/10 text-xs font-medium text-muted-foreground">
               <div className="flex items-center gap-2 px-2">
@@ -293,12 +323,12 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
           </div>
         )}
 
-        {showGemini && (
+        {showAi && (
           <div className={`${(showVariables && variables.length > 0) ? 'h-1/3' : 'h-1/2'} flex flex-col bg-muted/5 relative animate-in slide-in-from-bottom-10 duration-300`}>
             <div className="p-2 border-b flex items-center justify-between bg-muted/10 text-xs font-medium text-muted-foreground">
               <div className="flex items-center gap-2 px-2">
                 <Bot className="h-3 w-3 text-blue-500" />
-                Gemini Response
+                AI Response
               </div>
               <div className="flex items-center gap-1">
                 <Button 
@@ -306,8 +336,8 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
                   size="icon" 
                   className="h-6 w-6 hover:bg-muted/20" 
                   onClick={() => {
-                    navigator.clipboard.writeText(geminiResponse);
-                    toast.success("Copied Gemini response!");
+                    navigator.clipboard.writeText(aiResponse);
+                    toast.success("Copied AI response!");
                   }}
                   title="Copy response"
                 >
@@ -317,23 +347,23 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
                   variant="ghost" 
                   size="icon" 
                   className="h-6 w-6 hover:bg-muted/20" 
-                  onClick={() => setShowGemini(false)}
+                  onClick={() => setShowAi(false)}
                 >
                   <X className="h-3 w-3" />
                 </Button>
               </div>
             </div>
-            {isGeminiLoading ? (
+            {isAiLoading ? (
               <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-2">
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span className="text-xs">Generating response...</span>
               </div>
             ) : (
               <Textarea 
-                value={geminiResponse} 
-                onChange={(e) => setGeminiResponse(e.target.value)}
+                value={aiResponse} 
+                onChange={(e) => setAiResponse(e.target.value)}
                 className="flex-1 resize-none border-none focus-visible:ring-0 p-4 text-base leading-relaxed bg-transparent font-mono text-sm" 
-                placeholder="Gemini response will appear here..."
+                placeholder="AI response will appear here..."
               />
             )}
           </div>
@@ -348,11 +378,11 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
             <Button 
                 size="sm" 
                 variant="outline" 
-                onClick={handleAskGemini}
-                disabled={isGeminiLoading || !text.trim()}
+                onClick={handleAskAI}
+                disabled={isAiLoading || !text.trim()}
             >
                 <Sparkles className="h-3 w-3 mr-2 text-blue-500" />
-                Ask Gemini
+                Ask AI
             </Button>
             {variables.length > 0 && (
               <Button size="sm" variant="ghost" onClick={() => {

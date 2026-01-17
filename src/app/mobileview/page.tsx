@@ -119,7 +119,7 @@ const features = [
     icon: <Sparkles className="h-6 w-6 text-yellow-500" />,
     title: "AI Editor",
     color: "bg-yellow-500/10 text-yellow-500",
-    desc: "Gemini"
+    desc: "AI-Powered"
   }
 ];
 
