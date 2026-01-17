@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef, useCallback, memo } from "react";
+import { useState, useEffect, useRef, useCallback, memo, useMemo } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { HighlightedTextarea } from "@/components/ui/highlighted-textarea";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Snippet } from "@/types";
-import { Sparkles, X, Copy, Bot, Loader2 } from "lucide-react";
+import { Sparkles, X, Copy, Bot, Loader2, Braces } from "lucide-react";
 import { toast } from "sonner";
 
 interface SmartEditorProps {
@@ -19,7 +21,74 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
   const [geminiResponse, setGeminiResponse] = useState("");
   const [isGeminiLoading, setIsGeminiLoading] = useState(false);
   const [showGemini, setShowGemini] = useState(false);
+  const [variableValues, setVariableValues] = useState<Record<string, string>>({});
+  const [showVariables, setShowVariables] = useState(false);
+  const [hasShownVariables, setHasShownVariables] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Extract variables from text
+  const variables = useMemo(() => {
+    const matches = Array.from(text.matchAll(/{{\s*([^}\s]+)\s*}}/g));
+    const uniqueVars = new Set<string>();
+    matches.forEach(match => {
+      const varName = match[1];
+      if (varName) uniqueVars.add(varName);
+    });
+    return Array.from(uniqueVars);
+  }, [text]);
+
+  // Auto-show variables when they first appear
+  useEffect(() => {
+    if (variables.length > 0) {
+      if (!hasShownVariables) {
+        setShowVariables(true);
+        setHasShownVariables(true);
+      }
+    } else {
+      setHasShownVariables(false);
+      setShowVariables(false);
+    }
+  }, [variables.length, hasShownVariables]);
+
+  // Sync variableValues state when variables change
+  useEffect(() => {
+    setVariableValues(prev => {
+      const next = { ...prev };
+      let changed = false;
+      
+      // Remove values for variables that are no longer present
+      Object.keys(next).forEach(key => {
+        if (!variables.includes(key)) {
+          delete next[key];
+          changed = true;
+        }
+      });
+      
+      // Add empty values for new variables
+      variables.forEach(v => {
+        if (next[v] === undefined) {
+          next[v] = "";
+          changed = true;
+        }
+      });
+      
+      return changed ? next : prev;
+    });
+  }, [variables]);
+
+  const getProcessedText = useCallback(() => {
+    let processedText = text;
+    Object.entries(variableValues).forEach(([variable, value]) => {
+      if (value) {
+        // Use a regex that handles potential special characters in variable name
+        // and also handles variable whitespace inside the braces
+        const escapedVar = variable.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`{{\\s*${escapedVar}\\s*}}`, 'g');
+        processedText = processedText.replace(regex, value);
+      }
+    });
+    return processedText;
+  }, [text, variableValues]);
 
   useEffect(() => {
     if (cursorIndex === null) {
@@ -114,16 +183,36 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
           <Sparkles className="h-4 w-4 text-yellow-500" />
           Smart Editor
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 lg:hidden">
-          <X className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 hidden lg:flex">
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {variables.length > 0 && (
+            <Button 
+              variant={showVariables ? "secondary" : "ghost"} 
+              size="sm" 
+              onClick={() => setShowVariables(!showVariables)}
+              className="h-8 gap-2"
+            >
+              <Braces className="h-4 w-4" />
+              <span className="hidden sm:inline">Variables</span>
+              <span className="bg-primary/20 text-primary px-1.5 rounded-full text-[10px] font-bold">
+                {variables.length}
+              </span>
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 lg:hidden">
+            <X className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 hidden lg:flex">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       
       <div className="flex-1 relative flex flex-col overflow-hidden">
-        <div className={`relative flex flex-col transition-all duration-300 ${showGemini ? "h-1/2 border-b" : "h-full"}`}>
+        <div className={`relative flex flex-col transition-all duration-300 ${
+          (showGemini && showVariables && variables.length > 0) ? "h-1/3 border-b" :
+          (showGemini || (showVariables && variables.length > 0)) ? "h-1/2 border-b" : 
+          "h-full"
+        }`}>
           <div className="flex-1 relative w-full min-h-0">
             <HighlightedTextarea
               ref={textareaRef}
@@ -162,8 +251,50 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
           )}
         </div>
 
+        {showVariables && variables.length > 0 && (
+          <div className={`flex flex-col bg-muted/5 relative animate-in slide-in-from-bottom-10 duration-300 ${
+            showGemini ? 'h-1/3 border-b' : 'flex-1'
+          } overflow-hidden`}>
+            <div className="p-2 border-b flex items-center justify-between bg-muted/10 text-xs font-medium text-muted-foreground">
+              <div className="flex items-center gap-2 px-2">
+                <Braces className="h-3 w-3 text-primary" />
+                Variable Values
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 hover:bg-muted/20" 
+                onClick={() => setShowVariables(false)}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {variables.map(variable => (
+                  <div key={variable} className="space-y-1.5">
+                    <Label htmlFor={`var-${variable}`} className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+                      {variable}
+                    </Label>
+                    <Input
+                      id={`var-${variable}`}
+                      placeholder={`Value for ${variable}...`}
+                      value={variableValues[variable] || ""}
+                      onChange={(e) => setVariableValues(prev => ({
+                        ...prev,
+                        [variable]: e.target.value
+                      }))}
+                      className="h-8 text-sm bg-background"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {showGemini && (
-          <div className="h-1/2 flex flex-col bg-muted/5 relative animate-in slide-in-from-bottom-10 duration-300">
+          <div className={`${(showVariables && variables.length > 0) ? 'h-1/3' : 'h-1/2'} flex flex-col bg-muted/5 relative animate-in slide-in-from-bottom-10 duration-300`}>
             <div className="p-2 border-b flex items-center justify-between bg-muted/10 text-xs font-medium text-muted-foreground">
               <div className="flex items-center gap-2 px-2">
                 <Bot className="h-3 w-3 text-blue-500" />
@@ -223,12 +354,22 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
                 <Sparkles className="h-3 w-3 mr-2 text-blue-500" />
                 Ask Gemini
             </Button>
+            {variables.length > 0 && (
+              <Button size="sm" variant="ghost" onClick={() => {
+                  navigator.clipboard.writeText(text);
+                  toast.success("Template copied!");
+              }}>
+                  <Copy className="h-3 w-3 mr-2" />
+                  Copy Template
+              </Button>
+            )}
             <Button size="sm" variant="default" onClick={() => {
-                navigator.clipboard.writeText(text);
-                toast.success("Copied to clipboard!");
+                const processed = getProcessedText();
+                navigator.clipboard.writeText(processed);
+                toast.success(variables.length > 0 ? "Copied with variable values!" : "Copied to clipboard!");
             }}>
                 <Copy className="h-3 w-3 mr-2" />
-                Copy All
+                {variables.length > 0 ? "Copy Final" : "Copy All"}
             </Button>
           </div>
       </div>

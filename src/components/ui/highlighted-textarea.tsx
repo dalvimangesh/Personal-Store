@@ -24,10 +24,10 @@ const HighlightedTextarea = React.forwardRef<HTMLTextAreaElement, HighlightedTex
 
     // Render highlights
     const renderHighlights = (text: string) => {
-      // Split by {{variable}} pattern
-      const parts = text.split(/({{[^}]+}})/g)
+      // Split by {{variable}} pattern with optional whitespace
+      const parts = text.split(/({{\s*[^}\s]+\s*}})/g)
       return parts.map((part, index) => {
-        if (part.match(/^{{[^}]+}}$/)) {
+        if (part.match(/^{{\s*[^}\s]+\s*}}$/)) {
             // Variable - highlight background, text transparent
             return (
               <span key={index} className="bg-yellow-500/30 text-transparent rounded-sm box-decoration-clone">
@@ -73,7 +73,3 @@ const HighlightedTextarea = React.forwardRef<HTMLTextAreaElement, HighlightedTex
 HighlightedTextarea.displayName = "HighlightedTextarea"
 
 export { HighlightedTextarea }
-
-
-
-
