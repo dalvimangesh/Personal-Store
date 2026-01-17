@@ -49,7 +49,7 @@ export function FeaturesList() {
       </div>
       <div className="flex items-start gap-3 pt-4 border-t col-span-full">
         <Sparkles className="h-5 w-5 mt-0.5 shrink-0 text-yellow-500" />
-        <span><strong>Smart Editor:</strong> AI-powered editing assistant powered by Gemini.</span>
+        <span><strong>Smart Editor:</strong> AI-powered editing assistant.</span>
       </div>
       <div className="flex items-start gap-3 col-span-full">
         <Eye className="h-5 w-5 mt-0.5 shrink-0 text-primary" />

@@ -4,6 +4,11 @@ Stop cluttering your chat apps with self-messages. Seamlessly share information 
 
 🔗 **Live:** [https://personal-store-alpha.vercel.app](https://personal-store-alpha.vercel.app)
 
+
+🔗 **Blog:** [DEV Community](https://personal-store-alpha.vercel.app)
+
+https://dev.to/mangesh_dalvi_7bcb2337614/i-built-personal-store-because-i-was-tired-of-texting-myself-2a3p
+
 ### 📲 Install as an App
 For the best experience on mobile, you can install Personal Store as a PWA:
 1. Open the [Live link](https://personal-store-alpha.vercel.app) in **Chrome** on your mobile device.
@@ -11,7 +16,7 @@ For the best experience on mobile, you can install Personal Store as a PWA:
 3. Select **"Add to Home Screen"** or **"Install app"**.
 4. Click **Install** to add it to your app drawer.
 
-<img width="2752" height="1536" alt="Gemini_Generated_Image_algrn9algrn9algr" src="https://github.com/user-attachments/assets/f36591d8-5105-49bf-9cdf-1ac5aa132633" />
+<img width="2752" height="1536" alt="AI_Generated_Image" src="https://github.com/user-attachments/assets/f36591d8-5105-49bf-9cdf-1ac5aa132633" />
 
 ## Features
 
@@ -26,7 +31,7 @@ For the best experience on mobile, you can install Personal Store as a PWA:
 - **📦 Drop Store:** Text management for easy sharing.
 - **🌍 Public Store:** Share snippets with the world or restrict access to specific users.
 - **🔥 Secret Store:** Generate self-destructing links for sensitive information (Burn After Reading).
-- **✨ Smart Editor:** AI-powered editing and generation using Google Gemini.
+- **✨ Smart Editor:** AI-powered editing and generation.
 - **🔒 Encrypted Storage:** All user data is encrypted at rest in the database for maximum privacy.
 - **👁️ Privacy Mode:** One-click privacy mode to blur sensitive content when screen sharing.
 - **👁️‍🗨️ Master Visibility:** Global control to show/hide items marked as hidden across all stores.
@@ -37,7 +42,7 @@ For the best experience on mobile, you can install Personal Store as a PWA:
 - **Framework:** Next.js 16 (App Router)
 - **UI Library:** React 19 & Tailwind CSS 4
 - **Database:** MongoDB (Mongoose)
-- **AI:** Google Generative AI (Gemini)
+- **AI:** LLM via OpenRouter
 - **Drag & Drop:** @dnd-kit
 - **Icons:** Lucide React
 - **Components:** Radix UI & Custom Components
@@ -59,7 +64,7 @@ For the best experience on mobile, you can install Personal Store as a PWA:
 
 3. **Set up environment variables**
 
-   Create a `.env` file with your MongoDB URI and Google Gemini API key.
+   Create a `.env` file with your MongoDB URI and OpenRouter API key.
 
 4. **Run the development server**
 
