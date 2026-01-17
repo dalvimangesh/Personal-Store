@@ -3,7 +3,7 @@
 import { useState, useMemo, createContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame, SquareKanban, Activity, Footprints, Inbox, Info, GripVertical } from "lucide-react";
+import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame, SquareKanban, Activity, Footprints, Inbox, Info, GripVertical, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext, 
@@ -88,6 +88,7 @@ interface TagSidebarProps {
   showHidden: boolean;
   currentView: ViewType;
   isPrivacyMode: boolean;
+  isCollapsed?: boolean;
   visibleStores: Record<string, boolean>;
   orderedStores: string[];
   onSelectTag: (tag: string | null) => void;
@@ -95,14 +96,16 @@ interface TagSidebarProps {
   onViewChange: (view: ViewType) => void;
 }
 
-const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivacyMode, visibleStores, orderedStores, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
+const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivacyMode, isCollapsed, visibleStores, orderedStores, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
   <div className="space-y-4">
-    <div className="px-3 py-2">
-      <div className="flex items-center justify-between mb-2 px-4">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Menu
-          </h2>
-      </div>
+    <div className={isCollapsed ? "py-2" : "px-3 py-2"}>
+      {!isCollapsed && (
+        <div className="flex items-center justify-between mb-2 px-4">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Menu
+            </h2>
+        </div>
+      )}
       <div className="space-y-1">
         {orderedStores.map((storeId) => {
              const store = STORE_ITEMS.find(s => s.id === storeId);
@@ -113,48 +116,51 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivac
                     <div key="snippets-group">
                         <Button
                             variant={currentView === 'snippets' && selectedTag === null && !showHidden ? "secondary" : "ghost"}
-                            className="w-full justify-start"
+                            className={`w-full ${isCollapsed ? "justify-center px-0" : "justify-start"}`}
                             onClick={() => {
                                 onViewChange('snippets');
                                 onSelectTag(null);
                                 onToggleHidden(false);
                             }}
+                            title={isCollapsed ? "Snippet Store" : undefined}
                         >
-                            <StickyNote className="mr-2 h-4 w-4" />
-                            Snippet Store
+                            <StickyNote className={`${isCollapsed ? "" : "mr-2"} h-4 w-4`} />
+                            {!isCollapsed && "Snippet Store"}
                         </Button>
 
-                        <div className="space-y-1 pl-4">
-                            <Button
-                                variant={currentView === 'snippets' && showHidden ? "secondary" : "ghost"}
-                                className="w-full justify-start text-muted-foreground hover:text-foreground h-8"
-                                onClick={() => {
-                                    onViewChange('snippets');
-                                    onToggleHidden(true);
-                                }}
-                            >
-                                <EyeOff className="mr-2 h-4 w-4" />
-                                Hidden Snippets
-                            </Button>
-                            
-                            {uniqueTags.map((tag) => (
-                            <Button
-                                key={tag}
-                                variant={currentView === 'snippets' && selectedTag === tag ? "secondary" : "ghost"}
-                                className={`w-full justify-start h-8 group ${isPrivacyMode ? "text-transparent select-none" : ""}`}
-                                onClick={() => {
-                                    onViewChange('snippets');
-                                    onSelectTag(tag);
-                                    onToggleHidden(false);
-                                }}
-                            >
-                                <Tag className={`mr-2 h-4 w-4 ${isPrivacyMode ? "text-muted-foreground" : ""}`} />
-                                <span className={isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300 text-foreground" : ""}>
-                                    {tag}
-                                </span>
-                            </Button>
-                            ))}
-                        </div>
+                        {!isCollapsed && (
+                          <div className="space-y-1 pl-4">
+                              <Button
+                                  variant={currentView === 'snippets' && showHidden ? "secondary" : "ghost"}
+                                  className="w-full justify-start text-muted-foreground hover:text-foreground h-8"
+                                  onClick={() => {
+                                      onViewChange('snippets');
+                                      onToggleHidden(true);
+                                  }}
+                              >
+                                  <EyeOff className="mr-2 h-4 w-4" />
+                                  Hidden Snippets
+                              </Button>
+                              
+                              {uniqueTags.map((tag) => (
+                              <Button
+                                  key={tag}
+                                  variant={currentView === 'snippets' && selectedTag === tag ? "secondary" : "ghost"}
+                                  className={`w-full justify-start h-8 group ${isPrivacyMode ? "text-transparent select-none" : ""}`}
+                                  onClick={() => {
+                                      onViewChange('snippets');
+                                      onSelectTag(tag);
+                                      onToggleHidden(false);
+                                  }}
+                              >
+                                  <Tag className={`mr-2 h-4 w-4 ${isPrivacyMode ? "text-muted-foreground" : ""}`} />
+                                  <span className={isPrivacyMode ? "blur-sm group-hover:blur-none transition-all duration-300 text-foreground" : ""}>
+                                      {tag}
+                                  </span>
+                              </Button>
+                              ))}
+                          </div>
+                        )}
                     </div>
                 );
              }
@@ -163,11 +169,12 @@ const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivac
                 <Button
                     key={store.id}
                     variant={currentView === store.id ? "secondary" : "ghost"}
-                    className="w-full justify-start"
+                    className={`w-full ${isCollapsed ? "justify-center px-0" : "justify-start"}`}
                     onClick={() => onViewChange(store.id as ViewType)}
+                    title={isCollapsed ? store.label : undefined}
                 >
-                    <store.icon className="mr-2 h-4 w-4" />
-                    {store.label}
+                    <store.icon className={`${isCollapsed ? "" : "mr-2"} h-4 w-4`} />
+                    {!isCollapsed && store.label}
                 </Button>
              );
         })}
@@ -234,6 +241,7 @@ export default function Home() {
   } = useSharedSnippets();
 
   const [currentView, setCurrentView] = useState<ViewType>('snippets');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [visibleStores, setVisibleStores] = useState<Record<string, boolean>>({
     'quick-clip': true,
@@ -281,11 +289,21 @@ export default function Home() {
             console.error("Failed to parse ordered stores", e);
         }
     }
+    const savedSidebarCollapsed = localStorage.getItem("sidebarCollapsed");
+    if (savedSidebarCollapsed) {
+        setIsSidebarCollapsed(savedSidebarCollapsed === "true");
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem("lastView", currentView);
   }, [currentView]);
+
+  useEffect(() => {
+    localStorage.setItem("sidebarCollapsed", String(isSidebarCollapsed));
+  }, [isSidebarCollapsed]);
+
+  const toggleSidebar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
 
   const toggleStoreVisibility = (id: string) => {
       const newVisibility = { ...visibleStores, [id]: !visibleStores[id] };
@@ -499,9 +517,20 @@ export default function Home() {
   return (
     <PrivacyContext.Provider value={{ isPrivacyMode, togglePrivacyMode }}>
     <div className="min-h-screen bg-background flex">
-      <aside className="hidden md:flex flex-col w-64 border-r h-screen p-4 sticky top-0">
-        <div className="mb-6 px-4 shrink-0 flex items-center gap-2">
-          <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center p-1">
+      <aside className={`hidden md:flex flex-col ${isSidebarCollapsed ? "w-16 px-2 py-4" : "w-64 p-4"} border-r h-screen sticky top-0 transition-all duration-300 ease-in-out z-40 group/sidebar`}>
+        {/* Toggle Button on Edge */}
+        <Button
+            variant="outline"
+            size="icon"
+            className="absolute -right-3 top-12 h-6 w-6 rounded-full border bg-background shadow-md z-50 opacity-0 group-hover/sidebar:opacity-100 transition-opacity flex items-center justify-center"
+            onClick={toggleSidebar}
+            title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+            {isSidebarCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+        </Button>
+
+        <div className={`mb-6 shrink-0 flex items-center ${isSidebarCollapsed ? "justify-center" : "gap-2 px-4"}`}>
+          <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center p-1 shrink-0">
             <Image 
               src="/logo.svg" 
               alt="Personal Store Logo" 
@@ -510,8 +539,9 @@ export default function Home() {
               className="invert dark:invert-0"
             />
           </div>
-          <h1 className="text-xl font-bold tracking-tight">Personal Store</h1>
+          {!isSidebarCollapsed && <h1 className="text-xl font-bold tracking-tight truncate">Personal Store</h1>}
         </div>
+        
         <div className="flex-1 overflow-y-auto">
             <TagSidebar 
                 uniqueTags={uniqueTags} 
@@ -519,6 +549,7 @@ export default function Home() {
                 showHidden={showHidden}
                 currentView={currentView}
                 isPrivacyMode={isPrivacyMode}
+                isCollapsed={isSidebarCollapsed}
                 visibleStores={visibleStores}
                 orderedStores={orderedStores}
                 onSelectTag={setSelectedTag} 
@@ -528,27 +559,29 @@ export default function Home() {
                 }}
                 onViewChange={handleViewChange}
             />
-            <div className="px-3 py-2 mt-4">
+            <div className={`mt-4 ${isSidebarCollapsed ? "py-2" : "px-3 py-2"}`}>
                  <Button
                     variant={currentView === 'about' ? "secondary" : "ghost"}
-                    className="w-full justify-start"
+                    className={`w-full ${isSidebarCollapsed ? "justify-center px-0" : "justify-start"}`}
                     onClick={() => handleViewChange('about')}
+                    title={isSidebarCollapsed ? "About This Store" : undefined}
                 >
-                    <Info className="mr-2 h-4 w-4" />
-                    This Store
+                    <Info className={`${isSidebarCollapsed ? "" : "mr-2"} h-4 w-4`} />
+                    {!isSidebarCollapsed && "This Store"}
                 </Button>
             </div>
         </div>
-        {username && (
-            <div className="mt-auto border-t pt-4 px-2 space-y-2 shrink-0">
+
+        <div className="mt-auto border-t pt-4 space-y-2 shrink-0">
+            {username && (
                 <UserProfileDialog username={username} onUpdate={setUsername}>
-                     <Button variant="ghost" className="w-full justify-start gap-2">
-                        <User className="h-4 w-4" />
-                        <span className="truncate">{username}</span>
+                     <Button variant="ghost" className={`w-full ${isSidebarCollapsed ? "justify-center px-0" : "justify-start gap-2"}`}>
+                        <User className="h-4 w-4 shrink-0" />
+                        {!isSidebarCollapsed && <span className="truncate">{username}</span>}
                     </Button>
                 </UserProfileDialog>
-            </div>
-        )}
+            )}
+        </div>
       </aside>
 
       {/* Main Content Area - Using Flex to adjust width when editor is open */}
