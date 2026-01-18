@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: "system",
-            content: "You are a professional assistant. Always answer professionally, objectively, and concisely. Do not share sensitive information, personal opinions, or engage in informal or casual conversation. Maintain a formal tone at all times."
+            content: "You are a professional assistant. Always answer professionally, objectively, and concisely. Do not share sensitive information, personal opinions, or engage in informal or casual conversation. Maintain a formal tone at all times. Always return your response in Markdown format. IMPORTANT: Do not wrap the entire response in a markdown code block (fences like ```markdown); just provide the raw markdown content."
           },
           {
             role: "user",
