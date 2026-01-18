@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Snippet } from "@/types";
-import { Sparkles, X, Copy, Bot, Loader2, Braces } from "lucide-react";
+import { Sparkles, X, Copy, Bot, Loader2, Braces, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface SmartEditorProps {
@@ -21,7 +21,40 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
   const [aiResponse, setAiResponse] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [showAi, setShowAi] = useState(false);
+  const [isAiEditing, setIsAiEditing] = useState(false);
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
+
+  // Load history from local storage on mount
+  useEffect(() => {
+    const savedText = localStorage.getItem("smart_editor_text");
+    const savedResponse = localStorage.getItem("smart_editor_ai_response");
+    const savedShowAi = localStorage.getItem("smart_editor_show_ai") === "true";
+    
+    if (savedText) setText(savedText);
+    if (savedResponse) setAiResponse(savedResponse);
+    if (savedShowAi) setShowAi(true);
+  }, []);
+
+  // Save text to local storage on change
+  useEffect(() => {
+    localStorage.setItem("smart_editor_text", text);
+  }, [text]);
+
+  // Save AI response to local storage on change
+  useEffect(() => {
+    localStorage.setItem("smart_editor_ai_response", aiResponse);
+    localStorage.setItem("smart_editor_show_ai", showAi.toString());
+  }, [aiResponse, showAi]);
+
+  const handleClearAll = useCallback(() => {
+    setText("");
+    setAiResponse("");
+    setShowAi(false);
+    localStorage.removeItem("smart_editor_text");
+    localStorage.removeItem("smart_editor_ai_response");
+    localStorage.removeItem("smart_editor_show_ai");
+    toast.success("Editor history cleared!");
+  }, []);
   const [showVariables, setShowVariables] = useState(false);
   const [hasShownVariables, setHasShownVariables] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -150,6 +183,7 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
     
     setIsAiLoading(true);
     setShowAi(true);
+    setIsAiEditing(false);
     setAiResponse("");
 
     try {
@@ -166,9 +200,10 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
 
       const data = await res.json();
       setAiResponse(data.result);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      setAiResponse(error.message || "Error fetching response from AI. Please try again.");
+      const message = error instanceof Error ? error.message : "Error fetching response from AI. Please try again.";
+      setAiResponse(message);
     } finally {
       setIsAiLoading(false);
     }
@@ -196,13 +231,45 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
 
       const data = await res.json();
       setAiResponse(data.result);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      setAiResponse(error.message || "Error fetching response from Gemini. Please try again.");
+      const message = error instanceof Error ? error.message : "Error fetching response from Gemini. Please try again.";
+      setAiResponse(message);
     } finally {
       setIsAiLoading(false);
     }
   }, [text]);
+
+  const renderMarkdown = (content: string) => {
+    if (!content) return null;
+    
+    // Strip outer markdown fences if they wrap the entire response
+    let cleanContent = content.trim();
+    const markdownFenceRegex = /^```(?:markdown)?\n([\s\S]*?)\n```$/i;
+    const match = cleanContent.match(markdownFenceRegex);
+    if (match) {
+      cleanContent = match[1];
+    }
+
+    // Simple markdown renderer
+    const html = cleanContent
+      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-6 mb-3">$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-8 mb-4">$1</h1>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`(.*?)`/g, '<code class="bg-muted px-1.5 py-0.5 rounded font-mono text-xs">$1</code>')
+      .replace(/^\s*-\s+(.*$)/gim, '<li class="ml-4 list-disc">$1</li>')
+      .replace(/^\s*\d+\.\s+(.*$)/gim, '<li class="ml-4 list-decimal">$1</li>')
+      .replace(/\n/g, '<br />');
+
+    return (
+      <div 
+        className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  };
 
   if (!isOpen) return null;
 
@@ -213,7 +280,17 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
           <Sparkles className="h-4 w-4 text-yellow-500" />
           Smart Editor
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleClearAll}
+            className="h-8 gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+            title="Clear all text and AI response"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Clear All</span>
+          </Button>
           {variables.length > 0 && (
             <Button 
               variant={showVariables ? "secondary" : "ghost"} 
@@ -334,6 +411,15 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
                 <Button 
                   variant="ghost" 
                   size="icon" 
+                  className={`h-6 w-6 hover:bg-muted/20 ${isAiEditing ? 'text-primary' : 'text-muted-foreground'}`}
+                  onClick={() => setIsAiEditing(!isAiEditing)}
+                  title={isAiEditing ? "Show Preview" : "Edit Response"}
+                >
+                  <Braces className="h-3 w-3" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
                   className="h-6 w-6 hover:bg-muted/20" 
                   onClick={() => {
                     navigator.clipboard.writeText(aiResponse);
@@ -358,13 +444,19 @@ export const SmartEditor = memo(function SmartEditor({ isOpen, onClose, snippets
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span className="text-xs">Generating response...</span>
               </div>
-            ) : (
+            ) : isAiEditing ? (
               <Textarea 
                 value={aiResponse} 
                 onChange={(e) => setAiResponse(e.target.value)}
                 className="flex-1 resize-none border-none focus-visible:ring-0 p-4 text-base leading-relaxed bg-transparent font-mono text-sm" 
                 placeholder="AI response will appear here..."
               />
+            ) : (
+              <div className="flex-1 overflow-y-auto p-4 bg-transparent">
+                {renderMarkdown(aiResponse) || (
+                  <span className="text-muted-foreground text-sm italic">AI response will appear here...</span>
+                )}
+              </div>
             )}
           </div>
         )}
