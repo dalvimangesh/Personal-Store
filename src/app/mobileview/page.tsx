@@ -17,7 +17,8 @@ import {
   Sparkles,
   Search,
   Settings,
-  User as UserIcon
+  User as UserIcon,
+  Bot
 } from "lucide-react";
 import { ModeToggle } from "@/components/ModeToggle";
 import { Button } from "@/components/ui/button";
@@ -120,6 +121,13 @@ const features = [
     title: "AI Editor",
     color: "bg-yellow-500/10 text-yellow-500",
     desc: "AI-Powered"
+  },
+  {
+    id: "agent",
+    icon: <Bot className="h-6 w-6 text-indigo-500" />,
+    title: "Agent Store",
+    color: "bg-indigo-500/10 text-indigo-500",
+    desc: "AI Assistant"
   }
 ];
 

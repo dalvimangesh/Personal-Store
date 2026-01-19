@@ -31,6 +31,7 @@ For the best experience on mobile, you can install Personal Store as a PWA:
 - **📦 Drop Store:** Text management for easy sharing.
 - **🌍 Public Store:** Share snippets with the world or restrict access to specific users.
 - **🔥 Secret Store:** Generate self-destructing links for sensitive information (Burn After Reading).
+- **🤖 Agent Store:** Chat with an AI assistant that automatically organizes your inputs. Paste code, notes, or links, and the agent will analyze and save them to the appropriate store (Snippets, Clipboard, or Links) intelligently.
 - **✨ Smart Editor:** AI-powered editing and generation.
 - **🔒 Encrypted Storage:** All user data is encrypted at rest in the database for maximum privacy.
 - **👁️ Privacy Mode:** One-click privacy mode to blur sensitive content when screen sharing.
