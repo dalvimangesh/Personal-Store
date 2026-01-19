@@ -3,7 +3,7 @@
 import { useState, useMemo, createContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame, SquareKanban, Activity, Footprints, Inbox, Info, GripVertical, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Bot, Quote } from "lucide-react";
+import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame, SquareKanban, Activity, Footprints, Inbox, Info, GripVertical, ChevronLeft, ChevronRight, Bot, Quote } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext, 
@@ -246,19 +246,12 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<ViewType>('snippets');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
-  const [visibleStores, setVisibleStores] = useState<Record<string, boolean>>({
-    'ai-chat': true,
-    'quick-clip': true,
-    'todo': true,
-    'tracker': true,
-    'habit': true,
-    'steps': true,
-    'link-share': true,
-    'dropzone': true,
-    'public-store': true,
-    'secret-store': true,
-    'trash': true,
-    'snippets': true,
+  const [visibleStores, setVisibleStores] = useState<Record<string, boolean>>(() => {
+    const initial = STORE_ITEMS.reduce((acc, store) => {
+        acc[store.id] = true;
+        return acc;
+    }, {} as Record<string, boolean>);
+    return initial;
   });
 
   const [orderedStores, setOrderedStores] = useState<string[]>(STORE_ITEMS.map(s => s.id));
@@ -275,7 +268,15 @@ export default function Home() {
     const savedVisibility = localStorage.getItem("visibleStores");
     if (savedVisibility) {
         try {
-            setVisibleStores(JSON.parse(savedVisibility));
+            const parsedVisibility = JSON.parse(savedVisibility);
+            const mergedVisibility = { ...parsedVisibility };
+            // Ensure new stores are visible by default
+            STORE_ITEMS.forEach(store => {
+                if (mergedVisibility[store.id] === undefined) {
+                    mergedVisibility[store.id] = true;
+                }
+            });
+            setVisibleStores(mergedVisibility);
         } catch (e) {
             console.error("Failed to parse visible stores", e);
         }
