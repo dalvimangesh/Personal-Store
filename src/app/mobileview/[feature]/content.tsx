@@ -15,6 +15,7 @@ import { MobileTrashStore } from "@/components/mobile/trash-store";
 import { MobileClipboardStore } from "@/components/mobile/clipboard-store";
 import { MobileDropStore } from "@/components/mobile/drop-store";
 import { MobileSecretStore } from "@/components/mobile/secret-store";
+import { AiChat } from "@/components/AiChat";
 import { useSnippets } from "@/hooks/useSnippets";
 
 export function MobileFeatureContent({ feature }: { feature: string }) {
@@ -54,6 +55,12 @@ export function MobileFeatureContent({ feature }: { feature: string }) {
              />
           </div>
         );
+      case "agent":
+        return (
+            <div className="h-full relative overflow-hidden">
+                <AiChat />
+            </div>
+        );
       default:
         return (
           <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -77,6 +84,7 @@ export function MobileFeatureContent({ feature }: { feature: string }) {
       case "steps": return "Steps";
       case "trash": return "Trash";
       case "ai": return "Smart Editor";
+      case "agent": return "Agent Store";
       default: return "App";
     }
   };

@@ -3,7 +3,7 @@
 import { useState, useMemo, createContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame, SquareKanban, Activity, Footprints, Inbox, Info, GripVertical, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Plus, Search, Copy, Trash2, Menu, Tag, EyeOff, Eye, Shield, Sparkles, LogOut, Clipboard, Link2, StickyNote, Globe, User, Github, ListTodo, Flame, SquareKanban, Activity, Footprints, Inbox, Info, GripVertical, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Bot, Quote } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext, 
@@ -52,9 +52,11 @@ import { TodoStore } from "@/components/TodoStore";
 import { HabitStore } from "@/components/HabitStore";
 import { TrackerStore } from "@/components/TrackerStore";
 import { StepsStore } from "@/components/StepsStore";
+import { AiChat } from "@/components/AiChat";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
 import { FeaturesList } from "@/components/FeaturesList";
 import { SecretCreator } from "@/components/SecretCreator";
+import { MotivationalQuote } from "@/components/MotivationalQuote";
 import { ModeToggle } from "@/components/ModeToggle";
 
 // Privacy Context
@@ -67,6 +69,7 @@ const PrivacyContext = createContext<{
 });
 
 const STORE_ITEMS = [
+    { id: 'ai-chat', label: 'Agent Store', icon: Bot },
     { id: 'quick-clip', label: 'Clipboard Store', icon: Clipboard },
     { id: 'todo', label: 'Todo Store', icon: ListTodo },
     { id: 'tracker', label: 'Tracking Store', icon: SquareKanban },
@@ -80,7 +83,7 @@ const STORE_ITEMS = [
     { id: 'snippets', label: 'Snippet Store', icon: StickyNote },
 ] as const;
 
-type ViewType = 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit' | 'steps';
+type ViewType = 'snippets' | 'quick-clip' | 'link-share' | 'dropzone' | 'trash' | 'public-store' | 'about' | 'todo' | 'secret-store' | 'tracker' | 'habit' | 'steps' | 'ai-chat';
 
 interface TagSidebarProps {
   uniqueTags: string[];
@@ -244,6 +247,7 @@ export default function Home() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [visibleStores, setVisibleStores] = useState<Record<string, boolean>>({
+    'ai-chat': true,
     'quick-clip': true,
     'todo': true,
     'tracker': true,
@@ -347,11 +351,16 @@ export default function Home() {
 
   // Master Hide/Show State
   const [showHiddenMaster, setShowHiddenMaster] = useState(false);
+  const [showQuote, setShowQuote] = useState(true);
 
   useEffect(() => {
     const saved = localStorage.getItem("showHiddenMaster");
     if (saved !== null) {
       setShowHiddenMaster(saved === "true");
+    }
+    const savedQuote = localStorage.getItem("showQuote");
+    if (savedQuote !== null) {
+      setShowQuote(savedQuote === "true");
     }
   }, []);
 
@@ -359,6 +368,12 @@ export default function Home() {
     const newVal = !showHiddenMaster;
     setShowHiddenMaster(newVal);
     localStorage.setItem("showHiddenMaster", String(newVal));
+  };
+
+  const toggleQuote = () => {
+    const newVal = !showQuote;
+    setShowQuote(newVal);
+    localStorage.setItem("showQuote", String(newVal));
   };
 
   const [genericSearchQuery, setGenericSearchQuery] = useState("");
@@ -585,7 +600,9 @@ export default function Home() {
       </aside>
 
       {/* Main Content Area - Using Flex to adjust width when editor is open */}
-      <div className="flex flex-1 min-w-0 overflow-hidden">
+      <div className="flex flex-1 min-w-0 overflow-hidden relative">
+        {showQuote && <MotivationalQuote />}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
         <main className={`flex-1 p-4 md:p-8 min-w-0 w-full flex flex-col ${['dropzone', 'quick-clip', 'tracker'].includes(currentView) ? 'overflow-hidden h-full' : 'overflow-y-auto h-full relative'}`}>
           <header className="flex flex-col gap-4 mb-6 shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20 pt-2">
             <div className="flex items-center justify-between md:hidden">
@@ -658,7 +675,7 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col md:flex-row items-center gap-3 md:gap-4 w-full">
-              {currentView !== 'quick-clip' && currentView !== 'about' && currentView !== 'secret-store' && currentView !== 'tracker' && currentView !== 'habit' && (
+              {currentView !== 'quick-clip' && currentView !== 'about' && currentView !== 'secret-store' && currentView !== 'tracker' && currentView !== 'habit' && currentView !== 'ai-chat' && (
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -683,7 +700,7 @@ export default function Home() {
                 />
               </div>
               )}
-              <div className={`flex items-center gap-2 w-full md:w-auto justify-between ${(currentView === 'quick-clip' || currentView === 'about' || currentView === 'secret-store') ? 'md:justify-end md:ml-auto' : 'md:justify-start'}`}>
+              <div className={`flex items-center gap-2 w-full md:w-auto justify-between ${(currentView === 'quick-clip' || currentView === 'about' || currentView === 'secret-store' || currentView === 'ai-chat') ? 'md:justify-end md:ml-auto' : 'md:justify-start'}`}>
                 <div className="flex items-center gap-2">
                   <ModeToggle />
                   <Button 
@@ -721,7 +738,7 @@ export default function Home() {
                     <Button onClick={() => openSharedEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
                         <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Public</span><span className="sm:hidden">Add</span>
                     </Button>
-                ) : (currentView === 'todo' || currentView === 'secret-store' || currentView === 'tracker' || currentView === 'habit' || currentView === 'steps') ? null : (
+                ) : (currentView === 'todo' || currentView === 'secret-store' || currentView === 'tracker' || currentView === 'habit' || currentView === 'steps' || currentView === 'ai-chat') ? null : (
                     <Button onClick={() => openEditor(null)} size="sm" className="h-9 ml-auto md:ml-0">
                         <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Snippet</span><span className="sm:hidden">Add</span>
                     </Button>
@@ -752,6 +769,10 @@ export default function Home() {
           {currentView === 'quick-clip' ? (
             <div className="flex-1 h-full min-h-[500px]">
                 <QuickClipboardEditor isPrivacyMode={isPrivacyMode} showHiddenMaster={showHiddenMaster} />
+            </div>
+          ) : currentView === 'ai-chat' ? (
+            <div className="flex-1 h-full w-full relative min-h-0 overflow-hidden">
+                <AiChat />
             </div>
           ) : currentView === 'tracker' ? (
             <div className="flex-1 w-full">
@@ -854,6 +875,23 @@ export default function Home() {
                                     >
                                         {showHiddenMaster ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                                         {showHiddenMaster ? "Showing Hidden" : "Hiding Hidden"}
+                                    </Button>
+                                </div>
+
+                                <div className="border-t pt-6 flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <p className="font-medium">Daily Quote</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Show or hide the daily motivational quote at the top of the screen.
+                                        </p>
+                                    </div>
+                                    <Button 
+                                        variant={showQuote ? "default" : "outline"}
+                                        onClick={toggleQuote}
+                                        className="gap-2"
+                                    >
+                                        <Quote className="h-4 w-4" />
+                                        {showQuote ? "Showing Quote" : "Quote Hidden"}
                                     </Button>
                                 </div>
                             </div>
@@ -1065,6 +1103,7 @@ export default function Home() {
             />
           </div>
         )}
+      </div>
       </div>
     </div>
     </PrivacyContext.Provider>
