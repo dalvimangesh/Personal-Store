@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       "data": {
         "title": "string (suggest a title if missing)",
         "content": "string (the EXACT content from input, do not modify)",
-        "tags": ["string", "string"] (extract relevant tags) (suggest only one tag if missing),
+        "tags": ["string", "string"] (extract relevant tags) (CRITICAL: provide exactly 1 or maximum 2 high-quality tags, never more),
         "url": "string (only for link type, exact URL)",
         "category": "string (only for link type, see instructions)"
       },
@@ -85,7 +85,14 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await response.json();
-    let content = data.choices[0]?.message?.content || "{}";
+    let content = "{}";
+    
+    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+      content = data.choices[0].message.content || "{}";
+    } else {
+        console.error("Unexpected AI response structure:", JSON.stringify(data));
+        throw new Error("Invalid response from AI provider");
+    }
     
     // Clean up potential markdown fences if the model ignores instructions
     content = content.replace(/^```json\s*/, "").replace(/\s*```$/, "");
@@ -104,9 +111,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ result: parsedResult });
   } catch (error) {
     console.error("AI Analyze API Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    // Don't expose raw internal errors to the client
     return NextResponse.json(
-      { error: `Failed to analyze text: ${errorMessage}` },
+      { error: "I'm having trouble analyzing that right now. Please try again." },
       { status: 500 }
     );
   }

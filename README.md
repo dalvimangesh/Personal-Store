@@ -5,9 +5,7 @@ Stop cluttering your chat apps with self-messages. Seamlessly share information 
 🔗 **Live:** [https://personal-store-alpha.vercel.app](https://personal-store-alpha.vercel.app)
 
 
-🔗 **Blog:** [DEV Community](https://personal-store-alpha.vercel.app)
-
-https://dev.to/mangesh_dalvi_7bcb2337614/i-built-personal-store-because-i-was-tired-of-texting-myself-2a3p
+🔗 **Blog:** [DEV Community](https://dev.to/mangesh_dalvi_7bcb2337614/i-built-personal-store-because-i-was-tired-of-texting-myself-2a3p)
 
 ### 📲 Install as an App
 For the best experience on mobile, you can install Personal Store as a PWA:
