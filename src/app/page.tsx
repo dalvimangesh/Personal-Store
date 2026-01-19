@@ -163,11 +163,11 @@ const SidebarControls = ({
 );
 
 const TagSidebar = ({ uniqueTags, selectedTag, showHidden, currentView, isPrivacyMode, isCollapsed, visibleStores, orderedStores, onSelectTag, onToggleHidden, onViewChange }: TagSidebarProps) => (
-  <div className="space-y-4">
-    <div className={isCollapsed ? "py-2" : "px-3 py-2"}>
+  <div className="space-y-2">
+    <div className={isCollapsed ? "py-1" : "px-2 py-1"}>
       {!isCollapsed && (
-        <div className="flex items-center justify-between mb-2 px-4">
-            <h2 className="text-lg font-semibold tracking-tight">
+        <div className="flex items-center justify-between mb-1 px-2">
+            <h2 className="text-sm font-semibold tracking-tight">
               Menu
             </h2>
         </div>
@@ -568,7 +568,7 @@ export default function Home() {
   return (
     <PrivacyContext.Provider value={{ isPrivacyMode, togglePrivacyMode }}>
     <div className="h-screen overflow-hidden bg-background flex">
-      <aside className={`hidden md:flex flex-col ${isSidebarCollapsed ? "w-16 px-2 py-4" : "w-64 p-4"} border-r h-full sticky top-0 transition-all duration-300 ease-in-out z-40 group/sidebar`}>
+      <aside className={`hidden md:flex flex-col ${isSidebarCollapsed ? "w-16 px-2 py-2" : "w-64 p-2"} border-r h-full sticky top-0 transition-all duration-300 ease-in-out z-40 group/sidebar`}>
         {/* Toggle Button on Edge */}
         <Button
             variant="outline"
@@ -580,7 +580,7 @@ export default function Home() {
             {isSidebarCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
         </Button>
 
-        <div className={`mb-4 shrink-0 flex items-center ${isSidebarCollapsed ? "justify-center" : "gap-2 px-4"}`}>
+        <div className={`mb-2 shrink-0 flex items-center ${isSidebarCollapsed ? "justify-center" : "gap-2 px-2"}`}>
           <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center p-1 shrink-0">
             <Image 
               src="/logo.svg" 
@@ -593,7 +593,7 @@ export default function Home() {
           {!isSidebarCollapsed && <h1 className="text-xl font-bold tracking-tight truncate">Personal Store</h1>}
         </div>
 
-        <div className="px-2 pb-2">
+        <div className="px-1 pb-1">
             <SidebarControls 
                 isSidebarCollapsed={isSidebarCollapsed}
                 isPrivacyMode={isPrivacyMode}
@@ -622,7 +622,7 @@ export default function Home() {
                 }}
                 onViewChange={handleViewChange}
             />
-            <div className={`mt-4 ${isSidebarCollapsed ? "py-2" : "px-3 py-2"}`}>
+            <div className={`mt-4 ${isSidebarCollapsed ? "py-1" : "px-2 py-1"}`}>
                  <Button
                     variant={currentView === 'about' ? "secondary" : "ghost"}
                     className={`w-full ${isSidebarCollapsed ? "justify-center px-0" : "justify-start"}`}
@@ -649,10 +649,16 @@ export default function Home() {
 
       {/* Main Content Area - Using Flex to adjust width when editor is open */}
       <div className="flex flex-1 min-w-0 overflow-hidden relative">
-        {showQuote && <MotivationalQuote />}
+        {showQuote && (
+            <div className="absolute top-0 left-0 right-0 z-30 pointer-events-none">
+                <div className="pointer-events-auto">
+                    <MotivationalQuote />
+                </div>
+            </div>
+        )}
         <div className="flex flex-1 min-h-0 overflow-hidden">
         <main className={`flex-1 p-0 md:p-0 min-w-0 w-full flex flex-col ${['dropzone', 'quick-clip', 'tracker', 'ai-chat'].includes(currentView) ? 'overflow-hidden h-full' : 'overflow-y-auto h-full relative'}`}>
-          <header className="flex flex-col gap-4 mb-4 shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20 pt-4 px-4 md:px-8 border-b-0 pb-0">
+          <header className={`flex flex-col gap-4 mb-4 shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20 pt-4 px-4 md:px-8 border-b-0 pb-0 ${showQuote ? "mt-4" : ""}`}>
             <div className="flex items-center justify-between md:hidden">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center p-1">
@@ -765,7 +771,7 @@ export default function Home() {
                     <Button onClick={() => openSharedEditor(null)} size="sm" className="h-9 ml-auto md:ml-0 mb-4">
                         <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Public</span><span className="sm:hidden">Add</span>
                     </Button>
-                ) : (currentView === 'todo' || currentView === 'secret-store' || currentView === 'tracker' || currentView === 'habit' || currentView === 'steps' || currentView === 'ai-chat' || currentView === 'quick-clip' || currentView === 'link-share') ? null : (
+                ) : (currentView === 'todo' || currentView === 'secret-store' || currentView === 'tracker' || currentView === 'habit' || currentView === 'steps' || currentView === 'ai-chat' || currentView === 'quick-clip' || currentView === 'link-share' || currentView === 'about') ? null : (
                     <Button onClick={() => openEditor(null)} size="sm" className="h-9 ml-auto md:ml-0 mb-4">
                         <Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Add Snippet</span><span className="sm:hidden">Add</span>
                     </Button>
