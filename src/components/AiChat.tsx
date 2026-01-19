@@ -364,7 +364,7 @@ export function AiChat() {
                 
                 <div className={`max-w-[85%] space-y-1`}>
                     <div
-                    className={`px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap border ${
+                    className={`px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap break-words border ${
                         msg.role === "assistant"
                         ? "bg-muted/50 border-border/50 text-foreground rounded-tl-none"
                         : "bg-blue-50/50 dark:bg-blue-950/20 border-blue-100/50 dark:border-blue-800/50 text-foreground rounded-tr-none"
@@ -422,7 +422,7 @@ export function AiChat() {
             }}
             placeholder="Type a message..."
             disabled={isLoading}
-            className="flex-1 min-h-[40px] max-h-[160px] resize-none py-2"
+            className="flex-1 min-h-[40px] max-h-[160px] resize-none py-2 break-words"
           />
           <Button onClick={handleSendMessage} disabled={isLoading || !inputValue.trim()} size="icon" className="h-10 w-10 shrink-0">
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
